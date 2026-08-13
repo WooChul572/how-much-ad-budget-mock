@@ -314,7 +314,7 @@ function applyEnrichmentToForm(enrichment) {
   if (!enrichment) return;
   applyEnrichmentField('company', ['#goalCompanyInput', '#companyInput'], enrichment.company);
   applyEnrichmentField('brand', ['#goalBrandInput', '#brandInput'], enrichment.brand);
-  if (enrichment.sourceMode !== 'gemini-enriched') {
+  if (enrichment.sourceMode === 'gemini-required') {
     syncVisibleInputsFromState();
     syncFormInputsToState();
     renderAll();
@@ -338,9 +338,9 @@ function applyEnrichmentToForm(enrichment) {
       input.value = enrichment.competitors[index] || '';
       input.dataset.aiSuggested = input.value ? 'true' : '';
     });
+    state.competitors = competitorInputs.map((input) => input.value.trim()).filter(Boolean).slice(0, 5);
   }
   syncFormInputsToState();
-  syncVisibleInputsFromState();
   renderAll();
 }
 
@@ -412,16 +412,30 @@ function drawGoalCurve() {
   const scenario = getCurrentScenario();
   const width = 720;
   const height = 300;
+  const minBudget = Math.max(1, Math.floor((scenario.range?.[0] ?? 10) * 0.72));
+  const maxBudget = Math.max(minBudget + 8, Math.ceil((scenario.range?.[1] ?? 25) * 1.18));
+  const optimalBudget = scenario.recommendedBudget || state.budget || 16.4;
+  const selectedBudget = Math.max(minBudget, Math.min(maxBudget, state.budget || optimalBudget));
+  const lowerRange = scenario.range?.[0] ?? optimalBudget * 0.72;
+  const upperRange = scenario.range?.[1] ?? optimalBudget * 1.18;
+  const goalValue = (budget) => {
+    const value = Number(budget);
+    if (value <= optimalBudget) {
+      return 55 + ((value - minBudget) / Math.max(1, optimalBudget - minBudget)) * 45;
+    }
+    return Math.min(122, 100 + 19 * (1 - Math.exp(-0.38 * (value - optimalBudget))));
+  };
+  const xForBudget = (budget) => ((budget - minBudget) / Math.max(1, maxBudget - minBudget)) * (width - 88) + 44;
+  const yForGoal = (goal) => height - 46 - ((goal - 50) / 75) * (height - 82);
   const points = [];
-  for (let budget = 10; budget <= 25; budget += 0.5) {
-    const x = ((budget - 10) / 15) * (width - 88) + 44;
-    const y = height - 46 - ((getGoalAchievementForBudget(budget) - 50) / 75) * (height - 82);
-    points.push([x, y]);
+  const step = Math.max(0.25, (maxBudget - minBudget) / 36);
+  for (let budget = minBudget; budget <= maxBudget + 0.001; budget += step) {
+    points.push([xForBudget(budget), yForGoal(goalValue(budget))]);
   }
   const path = points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   const area = `${path} L ${width - 44} ${height - 46} L 44 ${height - 46} Z`;
-  const selectedX = ((state.budget - 10) / 15) * (width - 88) + 44;
-  const selectedY = height - 46 - ((getGoalAchievementForBudget(state.budget) - 50) / 75) * (height - 82);
+  const selectedX = xForBudget(selectedBudget);
+  const selectedY = yForGoal(goalValue(selectedBudget));
 
   svg.innerHTML = `
     <defs>
