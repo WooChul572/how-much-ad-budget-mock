@@ -1,5 +1,6 @@
 import { buildPlanningScenario } from '../howmuch-data.mjs';
 import { mergeEnrichmentIntoScenarioInput } from './enrichment-utils.mjs';
+import { buildProviderSnapshot } from './provider-data.mjs';
 
 function toNumber(value, fallback) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -27,7 +28,7 @@ function parseEnrichment(value) {
   }
 }
 
-export default function handler(request, response) {
+export default async function handler(request, response) {
   const query = request.query ?? {};
   const baseInput = {
     currentBudget: toNumber(query.currentBudget, 0),
@@ -50,9 +51,24 @@ export default function handler(request, response) {
     conversionRate: toNumber(query.conversionRate, 2.6),
     competitorMode: query.competitorMode || 'unknown',
     competitors: toList(query.competitors),
+    competitionIndex: toNumber(query.competitionIndex, undefined),
   };
   const enrichment = parseEnrichment(query.enrichment);
-  const scenarioInput = enrichment ? mergeEnrichmentIntoScenarioInput(baseInput, enrichment) : baseInput;
+  const enrichedInput = enrichment ? mergeEnrichmentIntoScenarioInput(baseInput, enrichment) : baseInput;
+  const providerSnapshot = await buildProviderSnapshot({
+    company: enrichedInput.company,
+    brand: enrichedInput.brand,
+    market: enrichedInput.market,
+    target: enrichedInput.targetSegment,
+    goal: enrichedInput.targetGoal,
+  });
+  const scenarioInput = {
+    ...enrichedInput,
+    ...Object.fromEntries(Object.entries(providerSnapshot.scenarioAdjustments).filter(([, value]) => value !== undefined && value !== null && value !== '')),
+    market: enrichedInput.market || providerSnapshot.scenarioAdjustments.market,
+    targetSegment: enrichedInput.targetSegment || providerSnapshot.scenarioAdjustments.targetSegment,
+    competitionLevel: enrichedInput.competitionLevel === 'unknown' ? providerSnapshot.scenarioAdjustments.competitionLevel : enrichedInput.competitionLevel,
+  };
   const scenario = buildPlanningScenario(scenarioInput);
 
   response.status(200).json({
@@ -64,8 +80,13 @@ export default function handler(request, response) {
       dartConfigured: Boolean(process.env.DART_API_KEY),
       kosisConfigured: Boolean(process.env.KOSIS_API_KEY),
       geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-      liveDataApplied: false,
-      note: 'Current endpoint runs the HOW MUCH planning engine on API/server side. DART/KOSIS keys are detected through Vercel env vars; live provider fetch can replace mock benchmark inputs in the next integration step.',
+      liveDataApplied: providerSnapshot.liveDataApplied,
+      dartApplied: providerSnapshot.dart.applied,
+      kosisApplied: providerSnapshot.kosis.applied,
+      note: providerSnapshot.liveDataApplied
+        ? 'DART/KOSIS provider snapshot has been reflected in planning inputs before running the HOW MUCH engine.'
+        : 'DART/KOSIS calls were attempted or checked; category and demographic benchmark fallback was applied where live rows were unavailable.',
     },
+    providerSnapshot,
   });
 }
