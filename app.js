@@ -86,6 +86,7 @@ function showStep(index) {
   if (state.step === 3) {
     setTimeout(() => showStep(4), 1250);
   }
+  syncVisibleInputsFromState();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -153,6 +154,8 @@ function markManualScenarioInputChanged() {
 }
 
 function goHome() {
+  syncFormInputsToState({ preferLandingGoal: state.step === 0 });
+  syncVisibleInputsFromState();
   showStep(0);
   if (window.location.hash) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -182,6 +185,15 @@ function syncGoalIdentityToMarketForm() {
   }
 }
 
+function syncVisibleInputsFromState() {
+  setInput('#landingGoal', state.goal);
+  setInput('#goalInput', state.goal);
+  setInput('#goalCompanyInput', state.company);
+  setInput('#goalBrandInput', state.brand);
+  setInput('#companyInput', state.company);
+  setInput('#brandInput', state.brand);
+}
+
 function readValue(selector) {
   return document.querySelector(selector)?.value?.trim() || '';
 }
@@ -198,6 +210,8 @@ function syncFormInputsToState({ preferLandingGoal = false } = {}) {
   const goalInput = readValue('#goalInput');
   const goalCompany = readValue('#goalCompanyInput');
   const goalBrand = readValue('#goalBrandInput');
+  const marketCompany = readValue('#companyInput');
+  const marketBrand = readValue('#brandInput');
   if (preferLandingGoal && landingGoal) {
     state.goal = landingGoal;
     setInput('#goalInput', landingGoal);
@@ -207,8 +221,8 @@ function syncFormInputsToState({ preferLandingGoal = false } = {}) {
     state.goal = landingGoal;
   }
 
-  state.company = readValue('#companyInput') || goalCompany;
-  state.brand = readValue('#brandInput') || goalBrand;
+  state.company = state.step <= 1 ? goalCompany || marketCompany : marketCompany || goalCompany;
+  state.brand = state.step <= 1 ? goalBrand || marketBrand : marketBrand || goalBrand;
   state.market = readValue('#marketInput');
   state.targetSegment = readValue('#targetSegmentInput');
   state.targetType = inferTargetType(`${state.market} ${state.targetSegment}`);
@@ -654,6 +668,7 @@ function bindDynamicMarketInputs() {
     if (event.target?.id === 'brandInput') {
       markScenarioInputChanged();
       state.brand = event.target.value;
+      setInput('#goalBrandInput', event.target.value);
       renderAll();
     }
     if (event.target?.id === 'targetSegmentInput') {
@@ -931,6 +946,7 @@ document.querySelector('#landingGoal')?.addEventListener('input', (event) => {
 document.querySelector('#goalInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
   state.goal = event.target.value;
+  setInput('#landingGoal', event.target.value);
 });
 
 document.querySelector('#goalCompanyInput')?.addEventListener('input', (event) => {
@@ -948,6 +964,7 @@ document.querySelector('#goalBrandInput')?.addEventListener('input', (event) => 
 document.querySelector('#companyInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
   state.company = event.target.value;
+  setInput('#goalCompanyInput', event.target.value);
   renderAll();
   loadApiContext();
 });
