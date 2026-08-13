@@ -14,6 +14,12 @@ export default function handler(request, response) {
         keyPreview: process.env.KOSIS_API_KEY ? 'configured' : 'not set',
         purpose: 'Market size, population, target scale, category statistics',
       },
+      gemini: {
+        name: 'Google Gemini',
+        configured: Boolean(process.env.GEMINI_API_KEY),
+        keyPreview: process.env.GEMINI_API_KEY ? 'configured' : 'not set',
+        purpose: 'Goal parsing, market/competitor enrichment, evidence synthesis',
+      },
     },
     sources: [
       'Open DART company/disclosure data',

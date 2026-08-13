@@ -491,41 +491,6 @@ h3 {
   font-weight: 600;
 }
 
-.insight-strip {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 10px 12px;
-  border: 1px solid rgba(216, 180, 84, .28);
-  border-radius: 10px;
-  background: #fffbeb;
-}
-
-.insight-strip div {
-  display: grid;
-  gap: 3px;
-}
-
-.insight-strip b {
-  color: #ffdb72;
-}
-
-.insight-strip span {
-  color: #667085;
-  font-size: 13px;
-}
-
-.insight-strip button {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid #e4e7ec;
-  border-radius: 7px;
-  color: #111827;
-  background: #fff;
-}
-
 .source-card {
   display: grid;
   gap: 6px;
@@ -735,6 +700,21 @@ h3 {
   padding: 30px;
 }
 
+.goal-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.goal-mini-grid label {
+  margin-bottom: -4px;
+}
+
+.goal-mini-grid input {
+  margin-bottom: 4px;
+}
+
 label {
   display: grid;
   gap: 10px;
@@ -826,6 +806,24 @@ select {
 .api-snapshot span {
   color: #475467;
   line-height: 1.55;
+}
+
+.competitor-help {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e5eaf5;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.competitor-help b {
+  color: #1d2939;
+}
+
+.competitor-help span {
+  color: #667085;
+  line-height: 1.45;
 }
 
 .analysis-screen {
@@ -928,6 +926,58 @@ select {
 .hero-metric small,
 .hero-metric strong {
   color: white;
+}
+
+.scenario-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: stretch;
+  margin: 14px 0 18px;
+  padding: 14px;
+  border: 1px solid rgba(47, 107, 255, .18);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.scenario-summary div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5eaf5;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.scenario-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.scenario-summary b {
+  display: block;
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-summary em {
+  align-self: center;
+  justify-self: end;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: #155eef;
+  background: #eaf2ff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .dashboard-grid {
@@ -1313,10 +1363,15 @@ input[type="range"] {
   .data-lineage,
   .fact-grid,
   .form-screen,
+  .scenario-summary,
   .dashboard-grid,
   .dashboard-grid.bottom,
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .scenario-summary em {
+    justify-self: start;
   }
 
   .scenario-card {
@@ -1324,8 +1379,7 @@ input[type="range"] {
   }
 
   .scenario-top,
-  .decision-summary,
-  .insight-strip {
+  .decision-summary {
     display: grid;
   }
 

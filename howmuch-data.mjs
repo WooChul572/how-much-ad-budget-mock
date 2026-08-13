@@ -329,18 +329,19 @@ export function buildPlanningScenario(options = {}) {
 }
 
 export function parseGoalValue(goal = '') {
-  const text = String(goal).replace(/,/g, '');
-  const revenueMatch = text.match(/(?:매출|판매|Revenue|revenue)[^\d]*(\d+(?:\.\d+)?)\s*(조|천억|백억|억|만원)?/)
-    ?? text.match(/(\d+(?:\.\d+)?)\s*(조|천억|백억|억|만원)?\s*(?:매출|판매|Revenue|revenue)/);
+  const text = String(goal).replace(/,/g, '').replace(/\s+/g, ' ').trim();
+  const revenueMatch = text.match(/(?:매출|판매|Revenue|revenue)[^\d]*(\d+(?:\.\d+)?)\s*(조|천억|백억|억원|억|만원)?/)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*(조|천억|백억|억원|억|만원)?\s*(?:매출|판매|Revenue|revenue)/);
   if (revenueMatch) {
     const raw = Number(revenueMatch[1]);
-    const unit = revenueMatch[2] ?? '억';
+    const unit = revenueMatch[2] === '억원' ? '억' : revenueMatch[2] ?? '억';
     const multiplier = unit === '조' ? 10000 : unit === '천억' ? 1000 : unit === '백억' ? 100 : unit === '만원' ? 0.0001 : 1;
     const value = round(raw * multiplier);
     return { type: 'revenue', value, label: `매출 목표 ${formatBudget(value)}` };
   }
 
-  const customerMatch = text.match(/(?:고객|신규|회원|리드)[^\d]*(\d+(?:\.\d+)?)\s*(만|천)?/);
+  const customerMatch = text.match(/(?:고객|신규|회원|리드)[^\d]*(\d+(?:\.\d+)?)\s*(만|천)?/)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*(만|천)?\s*(?:명|명확보|고객|신규|회원|리드)/);
   if (customerMatch) {
     const raw = Number(customerMatch[1]);
     const multiplier = customerMatch[2] === '만' ? 10000 : customerMatch[2] === '천' ? 1000 : 1;
@@ -348,7 +349,8 @@ export function parseGoalValue(goal = '') {
     return { type: 'customers', value, label: `고객 목표 ${value.toLocaleString('ko-KR')}명` };
   }
 
-  const trafficMatch = text.match(/(?:방문|트래픽|클릭)[^\d]*(\d+(?:\.\d+)?)\s*(만|천)?/);
+  const trafficMatch = text.match(/(?:방문|트래픽|클릭)[^\d]*(\d+(?:\.\d+)?)\s*(만|천)?/)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*(만|천)?\s*(?:방문|트래픽|클릭|회)/);
   if (trafficMatch) {
     const raw = Number(trafficMatch[1]);
     const multiplier = trafficMatch[2] === '만' ? 10000 : trafficMatch[2] === '천' ? 1000 : 1;

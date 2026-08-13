@@ -41,6 +41,9 @@ const progressSteps = Array.from(document.querySelectorAll('.step-dot'));
 const slider = document.querySelector('#budgetSlider');
 let whatIfTouched = false;
 let apiScenario = null;
+let aiEnrichment = null;
+let enrichmentLoading = false;
+let competitorEdited = false;
 
 function formatWon(value) {
   return `${Number(value).toFixed(1).replace('.0', '')}억`;
@@ -144,6 +147,11 @@ function markScenarioInputChanged() {
   apiScenario = null;
 }
 
+function markManualScenarioInputChanged() {
+  markScenarioInputChanged();
+  aiEnrichment = null;
+}
+
 function goHome() {
   showStep(0);
   if (window.location.hash) {
@@ -154,9 +162,166 @@ function goHome() {
 function syncLandingGoalToForm() {
   const landingGoal = document.querySelector('#landingGoal');
   const value = landingGoal?.value?.trim();
-  if (!value) return;
-  state.goal = value;
-  setInput('#goalInput', value);
+  if (value) {
+    state.goal = value;
+    setInput('#goalInput', value);
+  }
+  syncGoalIdentityToMarketForm();
+}
+
+function syncGoalIdentityToMarketForm() {
+  const company = readValue('#goalCompanyInput');
+  const brand = readValue('#goalBrandInput');
+  if (company) {
+    state.company = company;
+    setInput('#companyInput', company);
+  }
+  if (brand) {
+    state.brand = brand;
+    setInput('#brandInput', brand);
+  }
+}
+
+function readValue(selector) {
+  return document.querySelector(selector)?.value?.trim() || '';
+}
+
+function readNumber(selector, fallback = 0) {
+  const value = readValue(selector);
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function syncFormInputsToState({ preferLandingGoal = false } = {}) {
+  const landingGoal = readValue('#landingGoal');
+  const goalInput = readValue('#goalInput');
+  const goalCompany = readValue('#goalCompanyInput');
+  const goalBrand = readValue('#goalBrandInput');
+  if (preferLandingGoal && landingGoal) {
+    state.goal = landingGoal;
+    setInput('#goalInput', landingGoal);
+  } else if (goalInput) {
+    state.goal = goalInput;
+  } else if (landingGoal) {
+    state.goal = landingGoal;
+  }
+
+  state.company = readValue('#companyInput') || goalCompany;
+  state.brand = readValue('#brandInput') || goalBrand;
+  state.market = readValue('#marketInput');
+  state.targetSegment = readValue('#targetSegmentInput');
+  state.targetType = inferTargetType(`${state.market} ${state.targetSegment}`);
+  state.competitionLevel = readValue('#competitionLevelInput') || state.competitionLevel;
+  state.lifecycleStage = readValue('#lifecycleStageInput') || state.lifecycleStage;
+  state.marketRevenue = readNumber('#marketSizeInput', state.marketRevenue || 5000);
+  state.targetShare = readNumber('#targetShareInput', state.targetShare || 10);
+  syncCurrentAnnualBudget(readValue('#currentBudgetInput'));
+  state.monthlyTvBudget = readNumber('#monthlyTvInput', 0);
+  state.monthlyDigitalBudget = readNumber('#monthlyDigitalInput', 0);
+  state.grossMargin = readNumber('#grossMarginInput', state.grossMargin || 52);
+  state.requiredRoas = readNumber('#requiredRoasInput', state.requiredRoas || 1.8);
+  state.customerLtv = readNumber('#customerLtvInput', state.customerLtv || 42);
+  state.conversionRate = readNumber('#conversionRateInput', state.conversionRate || 2.6);
+  state.competitors = Array.from(document.querySelectorAll('.competitor-input')).map((node) => node.value.trim()).filter(Boolean).slice(0, 5);
+  state.competitorMode = state.competitors.length ? 'known' : 'unknown';
+}
+
+function setSelectValue(selector, value) {
+  const node = document.querySelector(selector);
+  if (node && value) node.value = value;
+}
+
+function fillIfEmpty(selector, value) {
+  const node = document.querySelector(selector);
+  if (!node || node.value.trim() || value === undefined || value === null || value === '') return false;
+  node.value = String(value);
+  return true;
+}
+
+function applyEnrichmentToForm(enrichment) {
+  if (!enrichment) return;
+  fillIfEmpty('#companyInput', enrichment.company);
+  fillIfEmpty('#brandInput', enrichment.brand);
+  fillIfEmpty('#marketInput', enrichment.market);
+  fillIfEmpty('#targetSegmentInput', enrichment.targetSegment);
+  fillIfEmpty('#marketSizeInput', enrichment.marketRevenue);
+  fillIfEmpty('#targetShareInput', enrichment.targetShare);
+  if (document.querySelector('#competitionLevelInput')?.value === 'unknown') {
+    setSelectValue('#competitionLevelInput', enrichment.competitionLevel);
+  }
+  setSelectValue('#lifecycleStageInput', enrichment.lifecycleStage);
+
+  const competitorInputs = Array.from(document.querySelectorAll('.competitor-input'));
+  if (!competitorEdited && enrichment.competitors?.length && competitorInputs.every((input) => !input.value.trim())) {
+    state.competitorMode = 'known';
+    competitorInputs.forEach((input, index) => {
+      input.disabled = false;
+      input.value = enrichment.competitors[index] || '';
+    });
+  }
+  syncFormInputsToState();
+  renderAll();
+}
+
+function renderEnrichmentStatus(enrichment = aiEnrichment) {
+  const target = document.querySelector('#aiEnrichmentStatus');
+  if (!target) return;
+  if (enrichmentLoading) {
+    target.innerHTML = '<b>AI 시장 보강 중</b><span>목표 문장에서 광고주, 브랜드, 시장, 경쟁사를 추정하고 있습니다.</span>';
+    return;
+  }
+  if (!enrichment) {
+    target.innerHTML = '<b>AI 자동 보강</b><span>목표에 광고주명과 브랜드명이 있으면 Step 2에서 빈 칸을 자동으로 채웁니다.</span>';
+    return;
+  }
+  const mode = enrichment.sourceMode === 'gemini-enriched' ? 'Gemini 분석' : 'Fallback 추정';
+  const competitors = enrichment.competitors?.length ? enrichment.competitors.join(', ') : '경쟁사 모름';
+  target.innerHTML = `
+    <b>${mode} 반영 · 신뢰도 ${enrichment.confidence ?? 60}%</b>
+    <span>${enrichment.company || '회사 미확정'} / ${enrichment.brand || '브랜드 미확정'} · ${enrichment.market || '시장 미확정'} · ${enrichment.targetSegment || '타겟 미확정'}</span>
+    <span>경쟁사: ${competitors}</span>
+    <span>${enrichment.rationale || 'AI/벤치마크 기반으로 빈 입력값을 보강했습니다.'}</span>
+  `;
+}
+
+async function loadAiEnrichment() {
+  syncFormInputsToState({ preferLandingGoal: state.step === 0 });
+  syncGoalIdentityToMarketForm();
+  if (!state.goal && !state.company && !state.brand) return null;
+  enrichmentLoading = true;
+  renderEnrichmentStatus();
+  try {
+    const params = new URLSearchParams({
+      goal: state.goal,
+      company: state.company,
+      brand: state.brand,
+      market: state.market,
+      targetSegment: state.targetSegment,
+      competitionLevel: state.competitionLevel,
+      lifecycleStage: state.lifecycleStage,
+      marketRevenue: String(state.marketRevenue || 0),
+      targetShare: String(state.targetShare || 0),
+      competitors: state.competitors.join(','),
+    });
+    const response = await fetch(`/api/ai-market-enrichment?${params}`);
+    if (!response.ok) throw new Error(`ai enrichment ${response.status}`);
+    aiEnrichment = await response.json();
+    applyEnrichmentToForm(aiEnrichment);
+  } catch {
+    aiEnrichment = null;
+  } finally {
+    enrichmentLoading = false;
+    renderEnrichmentStatus();
+  }
+  return aiEnrichment;
+}
+
+async function prepareScenarioResult() {
+  syncFormInputsToState({ preferLandingGoal: state.step === 0 });
+  applyGoalHintsToMarketForm();
+  syncFormInputsToState();
+  await loadPlanningScenarioFromApi();
 }
 
 function drawGoalCurve() {
@@ -279,6 +444,60 @@ function renderMetrics(scenario = getCurrentScenario()) {
   renderEnginePanel(scenario);
 }
 
+function renderScenarioSummary(scenario = getCurrentScenario()) {
+  const target = document.querySelector('#scenarioSummary');
+  if (!target) return;
+
+  const competitionLabels = {
+    unknown: '경쟁강도 모름',
+    low: '경쟁 낮음',
+    medium: '경쟁 보통',
+    high: '경쟁 높음',
+    'very-high': '경쟁 매우 높음',
+  };
+  const stageLabels = {
+    launch: '런칭 초기',
+    growth: '성장기',
+    mature: '안정기',
+    renewal: '재런칭',
+  };
+  const sourceText = scenario.sourceMode === 'api-engine'
+    ? 'API 엔진으로 재계산됨'
+    : '내장 예측 모델로 계산됨';
+  const companyBrand = [state.company, state.brand].filter(Boolean).join(' / ') || '미입력';
+  const marketTarget = [state.market, state.targetSegment].filter(Boolean).join(' / ') || '미입력';
+  const currentBudgetText = state.hasCurrentBudget ? `${formatWon(state.currentBudget)} 연간 집행` : '현재 예산 미입력';
+  const competitorText = state.competitorMode === 'known' && state.competitors.length
+    ? state.competitors.join(', ')
+    : state.competitorMode === 'none'
+      ? '경쟁사 없음'
+      : '경쟁사 모름';
+
+  const items = [
+    ['입력 목표', state.goal || '미입력'],
+    ['회사 / 브랜드', companyBrand],
+    ['시장 / 타겟', marketTarget],
+    ['조건', `${competitionLabels[state.competitionLevel] || state.competitionLevel} · ${stageLabels[state.lifecycleStage] || state.lifecycleStage}`],
+    ['현재 예산', currentBudgetText],
+    ['경쟁사', competitorText],
+  ];
+
+  const fragment = document.createDocumentFragment();
+  items.forEach(([label, value]) => {
+    const item = document.createElement('div');
+    const labelNode = document.createElement('span');
+    const valueNode = document.createElement('b');
+    labelNode.textContent = label;
+    valueNode.textContent = value;
+    item.append(labelNode, valueNode);
+    fragment.appendChild(item);
+  });
+  const source = document.createElement('em');
+  source.textContent = sourceText;
+  fragment.appendChild(source);
+  target.replaceChildren(fragment);
+}
+
 function renderEnginePanel(scenario) {
   const mode = document.querySelector('#engineMode');
   if (mode) {
@@ -354,10 +573,13 @@ function renderAll() {
   const scenario = syncWhatIfToRecommendation(getCurrentScenario());
   updateSliderBounds(scenario);
   renderMetrics(scenario);
+  renderScenarioSummary(scenario);
   renderPlans(scenario);
   renderMix(scenario);
   drawGoalCurve();
   renderBudgetPeriodLabels(scenario);
+  renderEnrichmentStatus();
+  renderCompetitorHelp();
   normalizeLandingGoalUi();
   normalizeMarketInputUi();
 }
@@ -384,23 +606,13 @@ function normalizeMarketInputUi() {
   }
 
   const competitorInputs = Array.from(document.querySelectorAll('.competitor-input'));
-  if (competitorInputs.length && !document.querySelector('#competitorModeInput')) {
-    const firstLabel = competitorInputs[0].closest('label');
-    firstLabel?.insertAdjacentHTML('beforebegin', `
-      <label>경쟁사 입력<select id="competitorModeInput">
-        <option value="unknown">모름</option>
-        <option value="none">없음</option>
-        <option value="known">직접 입력</option>
-      </select></label>
-    `);
-    competitorInputs.forEach((input, index) => {
-      input.value = '';
-      input.placeholder = index === 0 ? '예: 주영엔에스' : '선택 입력';
-      const label = input.closest('label');
-      if (label?.firstChild) label.firstChild.textContent = `주요 경쟁사 ${index + 1}`;
-      label?.classList.add('competitor-field');
-    });
-  }
+  competitorInputs.forEach((input, index) => {
+    input.disabled = false;
+    input.placeholder = index < 3 ? 'AI 자동 제안' : '선택 입력';
+    const label = input.closest('label');
+    if (label?.firstChild) label.firstChild.textContent = `주요 경쟁사 ${index + 1}`;
+    label?.classList.add('competitor-field');
+  });
 
   updateCompetitorFieldState();
   normalizeBusinessUnitLabels();
@@ -450,36 +662,38 @@ function bindDynamicMarketInputs() {
     }
     if (event.target?.classList?.contains('competitor-input')) {
       markScenarioInputChanged();
-      if (state.competitorMode !== 'known') {
-        state.competitors = [];
-      } else {
-        state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
-          .map((node) => node.value.trim())
-          .filter(Boolean)
-          .slice(0, 5);
-      }
+      competitorEdited = true;
+      state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
+        .map((node) => node.value.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+      state.competitorMode = state.competitors.length ? 'known' : 'unknown';
+      renderCompetitorHelp();
       renderAll();
     }
   });
 
-  document.addEventListener('change', (event) => {
-    if (event.target?.id === 'competitorModeInput') {
-      markScenarioInputChanged();
-      state.competitorMode = event.target.value;
-      if (state.competitorMode !== 'known') state.competitors = [];
-      updateCompetitorFieldState();
-      renderAll();
-    }
+  document.addEventListener('focusin', (event) => {
+    if (!event.target?.classList?.contains('competitor-input')) return;
+    competitorEdited = true;
+    renderCompetitorHelp();
   });
 }
 
 function updateCompetitorFieldState() {
-  const mode = document.querySelector('#competitorModeInput')?.value ?? state.competitorMode;
-  const disabled = mode !== 'known';
   document.querySelectorAll('.competitor-input').forEach((input) => {
-    input.disabled = disabled;
-    if (disabled) input.value = '';
+    input.disabled = false;
   });
+}
+
+function renderCompetitorHelp() {
+  const target = document.querySelector('#competitorHelp');
+  if (!target) return;
+  if (competitorEdited) {
+    target.innerHTML = '<b>주요 경쟁사</b><span>직접 입력값을 우선 반영합니다.</span>';
+  } else {
+    target.innerHTML = '<b>주요 경쟁사</b><span>시장과 브랜드 정보를 바탕으로 AI가 자동 제안합니다. 직접 입력하려면 칸을 클릭해서 수정하세요.</span>';
+  }
 }
 
 function normalizeLandingGoalUi() {
@@ -543,9 +757,11 @@ function renderApiStatus(status) {
   if (!target) return;
   const dart = status?.providers?.dart?.configured;
   const kosis = status?.providers?.kosis?.configured;
+  const gemini = status?.providers?.gemini?.configured;
   target.innerHTML = `
     <em>Open DART ${dart ? '연결됨' : '미설정'}</em>
     <em>KOSIS ${kosis ? '연결됨' : '미설정'}</em>
+    <em>Gemini ${gemini ? '연결됨' : '미설정'}</em>
   `;
 }
 
@@ -589,7 +805,7 @@ async function loadApiContext() {
 }
 
 function buildScenarioParams() {
-  return new URLSearchParams({
+  const params = new URLSearchParams({
     currentBudget: String(state.currentBudget),
     hasCurrentBudget: String(state.hasCurrentBudget),
     targetGoal: state.goal,
@@ -611,6 +827,8 @@ function buildScenarioParams() {
     competitorMode: state.competitorMode,
     competitors: state.competitors.join(','),
   });
+  if (aiEnrichment) params.set('enrichment', JSON.stringify(aiEnrichment));
+  return params;
 }
 
 async function loadPlanningScenarioFromApi() {
@@ -634,9 +852,18 @@ function setText(selector, text) {
 
 document.querySelectorAll('[data-next]').forEach((button) => {
   button.addEventListener('click', async () => {
-    if (state.step === 0) syncLandingGoalToForm();
-    if (state.step === 1) applyGoalHintsToMarketForm();
-    if (state.step === 2) await loadPlanningScenarioFromApi();
+    if (state.step === 0) {
+      syncLandingGoalToForm();
+      markScenarioInputChanged();
+      showStep(1);
+      await loadAiEnrichment();
+      return;
+    }
+    if (state.step === 1) {
+      applyGoalHintsToMarketForm();
+      await loadAiEnrichment();
+    }
+    if (state.step === 2) await prepareScenarioResult();
     showStep(state.step + 1);
   });
 });
@@ -646,18 +873,24 @@ document.querySelectorAll('[data-back]').forEach((button) => {
 });
 
 document.querySelectorAll('[data-result]').forEach((button) => {
-  button.addEventListener('click', () => showStep(4));
+  button.addEventListener('click', async () => {
+    await prepareScenarioResult();
+    showStep(4);
+  });
 });
 
 progressSteps.forEach((step, index) => {
   step.setAttribute('role', 'button');
   step.tabIndex = 0;
   step.title = `${step.textContent.trim()} 단계로 이동`;
-  step.addEventListener('click', () => showStep(index));
+  step.addEventListener('click', async () => {
+    if (index >= 3) await prepareScenarioResult();
+    showStep(index);
+  });
   step.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    showStep(index);
+    Promise.resolve(index >= 3 ? prepareScenarioResult() : null).then(() => showStep(index));
   });
 });
 
@@ -691,6 +924,18 @@ document.querySelector('#landingGoal')?.addEventListener('input', (event) => {
 document.querySelector('#goalInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
   state.goal = event.target.value;
+});
+
+document.querySelector('#goalCompanyInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
+  state.company = event.target.value;
+  setInput('#companyInput', event.target.value);
+});
+
+document.querySelector('#goalBrandInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
+  state.brand = event.target.value;
+  setInput('#brandInput', event.target.value);
 });
 
 document.querySelector('#companyInput')?.addEventListener('input', (event) => {

@@ -1,4 +1,5 @@
 import { buildPlanningScenario } from '../howmuch-data.mjs';
+import { mergeEnrichmentIntoScenarioInput } from './enrichment-utils.mjs';
 
 function toNumber(value, fallback) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -17,9 +18,18 @@ function toList(value) {
   return String(value).split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+function parseEnrichment(value) {
+  if (!value) return null;
+  try {
+    return typeof value === 'string' ? JSON.parse(value) : value;
+  } catch {
+    return null;
+  }
+}
+
 export default function handler(request, response) {
   const query = request.query ?? {};
-  const scenario = buildPlanningScenario({
+  const baseInput = {
     currentBudget: toNumber(query.currentBudget, 0),
     hasCurrentBudget: toBoolean(query.hasCurrentBudget, false),
     targetGoal: query.targetGoal || query.goal || '',
@@ -40,14 +50,20 @@ export default function handler(request, response) {
     conversionRate: toNumber(query.conversionRate, 2.6),
     competitorMode: query.competitorMode || 'unknown',
     competitors: toList(query.competitors),
-  });
+  };
+  const enrichment = parseEnrichment(query.enrichment);
+  const scenarioInput = enrichment ? mergeEnrichmentIntoScenarioInput(baseInput, enrichment) : baseInput;
+  const scenario = buildPlanningScenario(scenarioInput);
 
   response.status(200).json({
     ...scenario,
     sourceMode: 'api-engine',
+    enrichmentApplied: Boolean(enrichment),
+    enrichment,
     apiInputs: {
       dartConfigured: Boolean(process.env.DART_API_KEY),
       kosisConfigured: Boolean(process.env.KOSIS_API_KEY),
+      geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
       liveDataApplied: false,
       note: 'Current endpoint runs the HOW MUCH planning engine on API/server side. DART/KOSIS keys are detected through Vercel env vars; live provider fetch can replace mock benchmark inputs in the next integration step.',
     },
