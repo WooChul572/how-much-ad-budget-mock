@@ -244,11 +244,77 @@ h3 {
   display: none;
 }
 
+.legacy-preview-card,
+.trust-facts {
+  display: none !important;
+}
+
 .goal-console {
   max-width: 500px;
   margin-top: 24px;
   padding: 18px;
   border-radius: 12px;
+}
+
+.trust-panel {
+  display: grid;
+  gap: 26px;
+  max-width: 520px;
+  justify-self: end;
+  padding: 38px;
+  border: 1px solid rgba(228, 231, 236, .9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .09);
+}
+
+.trust-panel h2 {
+  margin: -14px 0 2px;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.trust-list {
+  display: grid;
+}
+
+.trust-list article {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  padding: 22px 0;
+  border-top: 1px solid #eef2f7;
+}
+
+.trust-list article:first-child {
+  border-top: 0;
+}
+
+.trust-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  color: #155eef;
+  font-size: 13px;
+  font-weight: 900;
+  background: #eef4ff;
+  box-shadow: inset 0 0 0 1px #d7e5ff;
+}
+
+.trust-list strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 17px;
+}
+
+.trust-list p {
+  margin: 0;
+  color: #475467;
+  line-height: 1.6;
 }
 
 .goal-console label {
@@ -1323,6 +1389,10 @@ input[type="range"] {
     grid-template-columns: 1fr;
   }
 
+  .trust-panel {
+    justify-self: stretch;
+    max-width: none;
+  }
 }
 
 @media (max-width: 900px) {
