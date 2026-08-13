@@ -143,6 +143,10 @@ function updateSliderBounds(scenario) {
   const max = Math.max(min + 8, Math.ceil(Math.max(scenario.range[1], recommended) * 1.12));
   slider.min = String(min);
   slider.max = String(max);
+  const current = Number(state.budget || recommended);
+  const clamped = Math.max(min, Math.min(max, current));
+  if (clamped !== current) state.budget = clamped;
+  slider.value = String(state.budget || recommended);
 }
 
 function markScenarioInputChanged() {
