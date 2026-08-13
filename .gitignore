@@ -1,0 +1,7 @@
+work/
+.env
+.env.*
+dist/
+node_modules/
+outputs/*.png
+.vercel/
