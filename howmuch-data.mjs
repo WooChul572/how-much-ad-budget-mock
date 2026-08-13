@@ -102,6 +102,7 @@ export const goalProfiles = {
 };
 
 export const competitionProfiles = {
+  unknown: { label: '모름', factor: 1.0, confidence: 74, note: '경쟁 강도를 모름으로 선택해 업종 평균 광고 intensity와 공개 벤치마크를 기준으로 계산합니다.' },
   low: { label: '낮음', factor: 0.78, confidence: 78, note: '경쟁 집행 압력이 낮아 목표 도달에 필요한 share-of-voice 보정이 작습니다.' },
   medium: { label: '보통', factor: 1.04, confidence: 82, note: '업종 평균 수준의 경쟁 압력을 적용합니다.' },
   high: { label: '높음', factor: 1.28, confidence: 85, note: '경쟁사 집행이 활발한 구간으로 방어 예산과 반복 노출 보정이 필요합니다.' },
@@ -179,7 +180,7 @@ export function buildPlanningScenario(options = {}) {
   const targetGoal = options.targetGoal ?? '신규 고객 10,000명 확보';
   const goalProfile = goalProfiles[options.goalType] ?? inferGoalProfile(targetGoal);
   const parsedGoal = parseGoalValue(targetGoal);
-  const competitionProfile = competitionProfiles[options.competitionLevel] ?? competitionProfiles.medium;
+  const competitionProfile = competitionProfiles[options.competitionLevel] ?? competitionProfiles.unknown;
   const targetProfile = targetProfiles[options.targetType] ?? targetProfiles.mass;
   const lifecycleStageKey = lifecycleProfiles[options.lifecycleStage] ? options.lifecycleStage : 'launch';
   const lifecycleProfile = lifecycleProfiles[lifecycleStageKey];

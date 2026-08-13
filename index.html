@@ -45,14 +45,14 @@
         </div>
       </div>
 
-      <aside class="scenario-card" aria-label="추천 예산 미리보기">
+      <aside class="scenario-card" aria-label="예시 리포트 미리보기">
         <div class="scenario-top">
           <div>
-            <span class="panel-label">Recommended Budget</span>
-            <strong id="landingRecommendedBudget">18.5<span>억원</span></strong>
-            <small id="landingBudgetRange">적정 범위 17.2 ~ 20.1억원</small>
+            <span class="panel-label">예시 리포트 화면</span>
+            <strong id="landingRecommendedBudget"><em>예시</em>18.5<span>억원</span></strong>
+            <small id="landingBudgetRange">실제 분석 결과가 아닌 화면 예시입니다</small>
           </div>
-          <span class="trust-badge">● 신뢰도 83%</span>
+          <span class="trust-badge sample">예시 화면</span>
         </div>
 
         <div class="preview-chart">
@@ -95,25 +95,6 @@
             <text x="536" y="254" font-size="13" fill="#8a94a6">20억</text>
             <text x="656" y="254" font-size="13" fill="#8a94a6">30억</text>
           </svg>
-        </div>
-
-        <div class="landing-mix">
-          <b>미디어 믹스 제안</b>
-          <div class="stacked-mix" aria-label="랜딩 추천 미디어 믹스">
-            <span style="width:25%; background:#2584ff"></span>
-            <span style="width:24%; background:#111827"></span>
-            <span style="width:21%; background:#0f9f6e"></span>
-            <span style="width:12%; background:#f2c94c"></span>
-            <span style="width:8%; background:#5865f2"></span>
-            <span style="width:10%; background:#9ca3af"></span>
-          </div>
-          <div class="mix-legend">
-            <span><i style="background:#2584ff"></i>YouTube <b>25% 4.5억</b></span>
-            <span><i style="background:#111827"></i>TV <b>24% 4.3억</b></span>
-            <span><i style="background:#0f9f6e"></i>Naver <b>21% 3.8억</b></span>
-            <span><i style="background:#f2c94c"></i>Kakao <b>12% 2.2억</b></span>
-            <span><i style="background:#9ca3af"></i>OOH <b>10% 1.8억</b></span>
-          </div>
         </div>
 
         <div class="insight-strip">
@@ -214,27 +195,21 @@
         <p>DART/KOSIS API 또는 로컬 프록시에 반영되어 있으면 외부 신호를 반영하고, 없으면 mock snapshot으로 흐름을 유지합니다.</p>
       </div>
       <div class="form-grid">
-        <label>회사명<input id="companyInput" value="Korea Eundan"></label>
-        <label>시장/타깃<input id="marketInput" value="건강기능식품 / 전국 / 25-54"></label>
-        <label>타깃 성향<select id="targetTypeInput"><option value="mass">대중 인지도형</option><option value="search">검색 수요형</option><option value="conversion">전환/구매형</option><option value="local">지역 접점형</option></select></label>
-        <label>경쟁 강도<select id="competitionLevelInput"><option value="medium">보통</option><option value="low">낮음</option><option value="high">높음</option><option value="very-high">매우 높음</option></select></label>
+        <label>회사명<input id="companyInput" placeholder="예: 고려은단"></label>
+        <label>브랜드명<input id="brandInput" placeholder="예: 관절올케어"></label>
+        <label>시장<input id="marketInput" placeholder="예: 콘드로이친 / 관절 건강기능식품"></label>
+        <label>타겟<input id="targetSegmentInput" placeholder="예: 45-69 여성 / 관절 건강 관심층"></label>
+        <label>경쟁 강도<select id="competitionLevelInput"><option value="unknown">모름</option><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option><option value="very-high">매우 높음</option></select></label>
         <label>캠페인 단계<select id="lifecycleStageInput"><option value="launch">런칭 초기</option><option value="scale">공격 성장</option><option value="stabilize">안정화</option><option value="defend">방어/유지</option></select></label>
-        <label>시장 규모<input id="marketSizeInput" type="number" value="5000" min="100" step="100"><span>억원</span></label>
-        <label>목표 점유율<input id="targetShareInput" type="number" value="10" min="1" max="50" step="1"><span>%</span></label>
-        <label>현재 TV 월 집행<input id="monthlyTvInput" type="number" value="12" min="0" step="0.5"><span>억원</span></label>
-        <label>현재 디지털 월 집행<input id="monthlyDigitalInput" type="number" value="14" min="0" step="0.5"><span>억원</span></label>
-        <label>마진율<input id="grossMarginInput" type="number" value="52" min="1" max="95" step="1"><span>%</span></label>
-        <label>요구 ROAS<input id="requiredRoasInput" type="number" value="1.8" min="0.5" max="10" step="0.1"><span>x</span></label>
-        <label>고객 LTV<input id="customerLtvInput" type="number" value="42" min="1" step="1"><span>만원</span></label>
-        <label>방문 전환율<input id="conversionRateInput" type="number" value="2.6" min="0.1" max="30" step="0.1"><span>%</span></label>
-        <label>주요 경쟁사 1<input class="competitor-input" value="리쥬란"></label>
-        <label>주요 경쟁사 2<input class="competitor-input" value="울쎄라"></label>
-        <label>주요 경쟁사 3<input class="competitor-input" value="뉴라미스"></label>
-        <label>주요 경쟁사 4<input class="competitor-input" placeholder="선택 입력"></label>
-        <label>주요 경쟁사 5<input class="competitor-input" placeholder="선택 입력"></label>
-        <label>현재 예산 기준<select id="budgetModeInput"><option value="with">현재 광고비 있음</option><option value="without">현재 광고비 없음</option></select></label>
-        <label>현재 광고비<input id="currentBudgetInput" type="number" value="12" min="1" step="0.1"><span>억원</span></label>
-        <label>목표 기간<select><option>다음 반기</option><option>다음 분기</option><option>연간</option></select></label>
+        <label>시장 규모<input id="marketSizeInput" type="number" min="100" step="100" placeholder="예: 5000"><span>억원</span></label>
+        <label>목표 점유율<input id="targetShareInput" type="number" min="1" max="50" step="1" placeholder="예: 10"><span>%</span></label>
+        <label>현재 집행 금액<input id="currentBudgetInput" type="number" min="0" step="0.1" placeholder="모르면 비워두세요"><span>억원/년</span></label>
+        <label>경쟁사 입력<select id="competitorModeInput"><option value="unknown">모름</option><option value="none">없음</option><option value="known">직접 입력</option></select></label>
+        <label class="competitor-field">주요 경쟁사 1<input class="competitor-input" placeholder="예: 주영엔에스" disabled></label>
+        <label class="competitor-field">주요 경쟁사 2<input class="competitor-input" placeholder="선택 입력" disabled></label>
+        <label class="competitor-field">주요 경쟁사 3<input class="competitor-input" placeholder="선택 입력" disabled></label>
+        <label class="competitor-field">주요 경쟁사 4<input class="competitor-input" placeholder="선택 입력" disabled></label>
+        <label class="competitor-field">주요 경쟁사 5<input class="competitor-input" placeholder="선택 입력" disabled></label>
         <article class="api-snapshot wide" id="apiSnapshot">
           <b>시장/타깃 데이터 연결</b>
           <span>Open DART와 KOSIS 상태를 불러오는 중입니다.</span>

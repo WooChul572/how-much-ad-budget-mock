@@ -14,13 +14,14 @@ import {
 const state = {
   step: 0,
   budget: 18.5,
-  company: '고려은단',
+  company: '',
   brand: '',
   goal: '2026 H2 신규 고객 확대',
-  market: '건강기능식품 / 전국 / 25-54',
-  currentBudget: 12,
-  hasCurrentBudget: true,
-  competitionLevel: 'medium',
+  market: '',
+  targetSegment: '',
+  currentBudget: 0,
+  hasCurrentBudget: false,
+  competitionLevel: 'unknown',
   targetType: 'mass',
   lifecycleStage: 'launch',
   marketRevenue: 5000,
@@ -80,6 +81,22 @@ function showStep(index) {
     setTimeout(() => showStep(4), 1250);
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function inferTargetType(value) {
+  const text = String(value || '');
+  if (/검색|수요|브랜드명|구매의도|고관여/.test(text)) return 'search';
+  if (/전환|구매|커머스|고객|매출|ROAS|재구매/.test(text)) return 'conversion';
+  if (/지역|매장|오프라인|옥외|OOH/.test(text)) return 'local';
+  return 'mass';
+}
+
+function syncCurrentAnnualBudget(value) {
+  const annualBudget = Number(value || 0);
+  state.currentBudget = annualBudget;
+  state.hasCurrentBudget = annualBudget > 0;
+  state.monthlyTvBudget = 0;
+  state.monthlyDigitalBudget = annualBudget > 0 ? annualBudget / 12 : 0;
 }
 
 function goHome() {
@@ -194,9 +211,6 @@ function renderMetrics() {
   const scenario = getCurrentScenario();
   setText('#recommendedBudget', formatWon(scenario.recommendedBudget));
   setText('#budgetRange', `${formatWon(scenario.range[0])}~${formatWon(scenario.range[1])}`);
-  const landingBudget = document.querySelector('#landingRecommendedBudget');
-  if (landingBudget) landingBudget.innerHTML = `${formatWon(scenario.recommendedBudget)}<span>원</span>`;
-  setText('#landingBudgetRange', `적정 범위 ${formatWon(scenario.range[0])} ~ ${formatWon(scenario.range[1])}`);
   if (state.hasCurrentBudget) {
     setText('#budgetGapTitle', '추가 필요 예산');
     setText('#budgetGap', `+${formatWon(scenario.incrementalBudget)}`);
@@ -371,9 +385,30 @@ function bindDynamicMarketInputs() {
   window.__howmuchDynamicInputsBound = true;
 
   document.addEventListener('input', (event) => {
-    if (event.target?.id === 'brandInput') state.brand = event.target.value;
-    if (event.target?.id === 'targetSegmentInput') state.targetSegment = event.target.value;
-    if (event.target?.id === 'marketInput') state.market = event.target.value;
+    if (event.target?.id === 'brandInput') {
+      state.brand = event.target.value;
+      renderAll();
+    }
+    if (event.target?.id === 'targetSegmentInput') {
+      state.targetSegment = event.target.value;
+      state.targetType = inferTargetType(event.target.value);
+      renderAll();
+    }
+    if (event.target?.id === 'marketInput') {
+      state.market = event.target.value;
+      renderAll();
+    }
+    if (event.target?.classList?.contains('competitor-input')) {
+      if (state.competitorMode !== 'known') {
+        state.competitors = [];
+      } else {
+        state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
+          .map((node) => node.value.trim())
+          .filter(Boolean)
+          .slice(0, 5);
+      }
+      renderAll();
+    }
   });
 
   document.addEventListener('change', (event) => {
@@ -425,9 +460,8 @@ function normalizeLandingGoalUi() {
 function renderBudgetPeriodLabels(scenario = getCurrentScenario()) {
   const periodText = '연간 기준';
   const landingLabel = document.querySelector('.scenario-card .panel-label');
-  if (landingLabel) landingLabel.textContent = 'Recommended Annual Budget';
-
-  setText('#landingBudgetRange', `${periodText} 적정 범위 ${formatWon(scenario.range[0])} ~ ${formatWon(scenario.range[1])}`);
+  if (landingLabel) landingLabel.textContent = '예시 리포트 화면';
+  setText('#landingBudgetRange', '실제 분석 결과가 아닌 화면 예시입니다 · 입력 후 결과 화면에서 계산됩니다');
 
   const currentBudgetInput = document.querySelector('#currentBudgetInput');
   const currentBudgetLabel = currentBudgetInput?.closest('label');
@@ -518,6 +552,18 @@ document.querySelectorAll('[data-back]').forEach((button) => {
 
 document.querySelectorAll('[data-result]').forEach((button) => {
   button.addEventListener('click', () => showStep(4));
+});
+
+progressSteps.forEach((step, index) => {
+  step.setAttribute('role', 'button');
+  step.tabIndex = 0;
+  step.title = `${step.textContent.trim()} 단계로 이동`;
+  step.addEventListener('click', () => showStep(index));
+  step.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    showStep(index);
+  });
 });
 
 document.querySelectorAll('[data-goal]').forEach((button) => {
@@ -615,21 +661,6 @@ document.querySelector('#conversionRateInput')?.addEventListener('input', (event
   renderAll();
 });
 
-document.querySelectorAll('.competitor-input').forEach((input) => {
-  input.addEventListener('input', () => {
-    if (state.competitorMode !== 'known') {
-      state.competitors = [];
-      renderAll();
-      return;
-    }
-    state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
-      .map((node) => node.value.trim())
-      .filter(Boolean)
-      .slice(0, 5);
-    renderAll();
-  });
-});
-
 document.querySelector('#budgetModeInput')?.addEventListener('change', (event) => {
   state.hasCurrentBudget = event.target.value === 'with';
   const currentBudgetInput = document.querySelector('#currentBudgetInput');
@@ -638,7 +669,7 @@ document.querySelector('#budgetModeInput')?.addEventListener('change', (event) =
 });
 
 document.querySelector('#currentBudgetInput')?.addEventListener('input', (event) => {
-  state.currentBudget = Number(event.target.value || 12);
+  syncCurrentAnnualBudget(event.target.value);
   renderAll();
 });
 
