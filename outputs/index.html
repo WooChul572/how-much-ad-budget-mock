@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HOW MUCH - 얼마면 되는데?</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#landing" aria-label="HOW MUCH 홈">
+      <span>HOW</span> MUCH
+      <small>얼마면 되는데?</small>
+    </a>
+    <nav class="stepper" aria-label="진행 단계">
+      <span class="step-dot active">Landing</span>
+      <span class="step-dot">Goal</span>
+      <span class="step-dot">Market</span>
+      <span class="step-dot">Analysis</span>
+      <span class="step-dot">Result</span>
+    </nav>
+  </header>
+
+  <main>
+    <section class="screen active landing" id="landing">
+      <div class="hero-copy">
+        <p class="eyebrow">B2B Marketing Intelligence Platform</p>
+        <h1>HOW MUCH</h1>
+        <p class="slogan">얼마면 되는데?</p>
+        <p class="lead">광고주의 목표를 먼저 입력하면, 현재 예산과 시장 조건을 기준으로 적정 광고비와 미디어 믹스를 역산합니다.</p>
+
+        <div class="goal-console">
+          <label for="landingGoal">어떤 목표를 달성하고 싶으신가요?</label>
+          <div class="goal-input-row">
+            <input id="landingGoal" value="예) 신규 고객 10,000명 확보">
+            <button class="icon-submit" data-next aria-label="목표 입력 시작">→</button>
+          </div>
+          <div class="goal-presets">
+            <button data-goal="브랜드 인지도 30% 향상">브랜드 인지도<br><b>30% 향상</b></button>
+            <button data-goal="웹사이트 방문 50,000회">웹사이트 방문<br><b>50,000회</b></button>
+            <button data-goal="신규 고객 확보 10,000명">신규 고객 확보<br><b>10,000명</b></button>
+            <button data-goal="매출 증대 10억원">매출 증대<br><b>10억원</b></button>
+          </div>
+          <button class="sample-link" data-result>목표 설정이 어렵다면? 샘플 리포트 보기 →</button>
+        </div>
+      </div>
+
+      <aside class="scenario-card" aria-label="추천 예산 미리보기">
+        <div class="scenario-top">
+          <div>
+            <span class="panel-label">Recommended Budget</span>
+            <strong id="landingRecommendedBudget">18.5<span>억원</span></strong>
+            <small id="landingBudgetRange">적정 범위 17.2 ~ 20.1억원</small>
+          </div>
+          <span class="trust-badge">● 신뢰도 83%</span>
+        </div>
+
+        <div class="preview-chart">
+          <div class="chart-title">
+            <b>목표 달성률 변화 예측</b>
+            <small>세로축 목표 달성률 · 가로축 광고비</small>
+          </div>
+          <svg viewBox="0 0 720 260" role="img" aria-label="광고비별 목표 달성률 그래프">
+            <defs>
+              <linearGradient id="landingCurveFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#1982ff" stop-opacity=".32"/>
+                <stop offset="100%" stop-color="#1982ff" stop-opacity=".03"/>
+              </linearGradient>
+            </defs>
+            <g stroke="rgba(141, 163, 196, .16)" stroke-width="1">
+              <line x1="58" y1="40" x2="690" y2="40"/>
+              <line x1="58" y1="88" x2="690" y2="88"/>
+              <line x1="58" y1="136" x2="690" y2="136"/>
+              <line x1="58" y1="184" x2="690" y2="184"/>
+              <line x1="58" y1="232" x2="690" y2="232"/>
+              <line x1="58" y1="40" x2="58" y2="232"/>
+              <line x1="178" y1="40" x2="178" y2="232"/>
+              <line x1="298" y1="40" x2="298" y2="232"/>
+              <line x1="418" y1="40" x2="418" y2="232"/>
+              <line x1="538" y1="40" x2="538" y2="232"/>
+              <line x1="658" y1="40" x2="658" y2="232"/>
+            </g>
+            <line x1="58" y1="88" x2="690" y2="88" stroke="#47a3ff" stroke-dasharray="5 5"/>
+            <text x="66" y="80" font-size="13" fill="#47a3ff">목표 100%</text>
+            <path d="M78 204 C150 151 238 88 418 76 C500 69 584 58 672 52 L672 232 L78 232 Z" fill="url(#landingCurveFill)"/>
+            <path d="M78 204 C150 151 238 88 418 76 C500 69 584 58 672 52" fill="none" stroke="#1982ff" stroke-width="3"/>
+            <line x1="418" y1="40" x2="418" y2="232" stroke="#47a3ff" stroke-dasharray="5 5"/>
+            <circle cx="418" cy="76" r="7" fill="#1982ff" stroke="#d7ebff" stroke-width="3"/>
+            <rect x="388" y="8" width="70" height="28" rx="7" fill="#0b66c9"/>
+            <text x="423" y="27" text-anchor="middle" font-size="14" fill="#e9f5ff">18.5억</text>
+            <text x="58" y="254" font-size="13" fill="#8a94a6">0</text>
+            <text x="176" y="254" font-size="13" fill="#8a94a6">5억</text>
+            <text x="296" y="254" font-size="13" fill="#8a94a6">10억</text>
+            <text x="416" y="254" font-size="13" fill="#8a94a6">15억</text>
+            <text x="536" y="254" font-size="13" fill="#8a94a6">20억</text>
+            <text x="656" y="254" font-size="13" fill="#8a94a6">30억</text>
+          </svg>
+        </div>
+
+        <div class="landing-mix">
+          <b>미디어 믹스 제안</b>
+          <div class="stacked-mix" aria-label="랜딩 추천 미디어 믹스">
+            <span style="width:25%; background:#2584ff"></span>
+            <span style="width:24%; background:#111827"></span>
+            <span style="width:21%; background:#0f9f6e"></span>
+            <span style="width:12%; background:#f2c94c"></span>
+            <span style="width:8%; background:#5865f2"></span>
+            <span style="width:10%; background:#9ca3af"></span>
+          </div>
+          <div class="mix-legend">
+            <span><i style="background:#2584ff"></i>YouTube <b>25% 4.5억</b></span>
+            <span><i style="background:#111827"></i>TV <b>24% 4.3억</b></span>
+            <span><i style="background:#0f9f6e"></i>Naver <b>21% 3.8억</b></span>
+            <span><i style="background:#f2c94c"></i>Kakao <b>12% 2.2억</b></span>
+            <span><i style="background:#9ca3af"></i>OOH <b>10% 1.8억</b></span>
+          </div>
+        </div>
+
+        <div class="insight-strip">
+          <div>
+            <b>더 알아볼까요?</b>
+            <span>예산을 10% 늘리면 도달수는 3.2% 증가할 것으로 예측됩니다.</span>
+          </div>
+          <button data-result>시나리오 분석하기 →</button>
+        </div>
+
+        <div class="source-card">
+          <b>데이터 출처 · 방법론 근거</b>
+          <span>Open DART 기업/공시 데이터 · KOSIS 국가통계 · KOBACO 광고산업 통계 · 플랫폼 벤치마크 · HOW MUCH mock modeling</span>
+          <div id="apiStatus" class="api-status" aria-live="polite">
+            <em>Open DART 확인 중</em>
+            <em>KOSIS 확인 중</em>
+          </div>
+          <div class="method-stack" aria-label="분석 엔진과 논문 근거">
+            <article>
+              <strong>01 Bayesian MMM Engine</strong>
+              <small>Jin et al.의 carryover/shape effect와 Bayesian prior 보정으로 목표 반응 곡선을 추정합니다.</small>
+            </article>
+            <article>
+              <strong>02 Goal Response Engine</strong>
+              <small>Adstock, Hill saturation, mROAS 기반으로 목표 달성률과 최적 예산 범위를 계산합니다.</small>
+            </article>
+          </div>
+          <div class="research-links">
+            <a href="https://research.google/pubs/bayesian-methods-for-media-mix-modeling-with-carryover-and-shape-effects/" target="_blank" rel="noreferrer">Google Research MMM paper</a>
+            <a href="https://research.google/pubs/media-mix-model-calibration-with-bayesian-priors/" target="_blank" rel="noreferrer">Bayesian prior calibration</a>
+            <a href="https://github.com/google/lightweight_mmm" target="_blank" rel="noreferrer">LightweightMMM</a>
+            <a href="https://developers.google.com/meridian" target="_blank" rel="noreferrer">Google Meridian</a>
+            <a href="https://facebookexperimental.github.io/Robyn/" target="_blank" rel="noreferrer">Meta Robyn</a>
+          </div>
+        </div>
+      </aside>
+
+      <section class="trust-facts" aria-label="HOW MUCH 신뢰 근거">
+        <div class="trust-facts-head">
+          <span>WHY TRUST HOW MUCH</span>
+          <h2>이래서 HOW MUCH의 판단 신뢰도가 높습니다</h2>
+          <p>예산 추천값은 단일 고정 숫자가 아니라, 공공 데이터와 플랫폼 리포트, 검증된 MMM 방법론, 국내 매체 집행 패턴을 함께 반영한 의사결정 결과입니다.</p>
+        </div>
+        <div class="fact-grid">
+          <article>
+            <b>01</b>
+            <strong>공공 데이터 기반 시장·타깃 산정</strong>
+            <span>DART 기업/공시 데이터와 KOSIS 시장·인구 통계를 통해 기업 규모, 투자 여력, 목표 가능 모수를 먼저 확인합니다.</span>
+            <em>Open DART · KOSIS</em>
+          </article>
+          <article>
+            <b>02</b>
+            <strong>광고주별 실제 집행 벤치마크</strong>
+            <span>광고주별·업종별 광고비 분포를 활용해 현재 예산이 경쟁 집행 수준 대비 충분한지 판단합니다.</span>
+            <em>광고정보센터 · KOBACO · GOAD</em>
+          </article>
+          <article>
+            <b>03</b>
+            <strong>국내 매체별 집행 패턴 반영</strong>
+            <span>Naver 검색 수요, Kakao 메시지/디스플레이, TV 도달, OOH 지역 반복 노출의 집행 구조를 별도 보정값으로 적용합니다.</span>
+            <em>Naver SearchAd · Kakao Moment · KOBACO</em>
+          </article>
+          <article>
+            <b>04</b>
+            <strong>논문 기반 Bayesian MMM 구조</strong>
+            <span>Adstock, Carryover, Hill Saturation, Bayesian prior calibration을 사용해 광고비 증가에 따른 목표 반응 곡선을 계산합니다.</span>
+            <em>Google Research · LightweightMMM · Meridian · Robyn</em>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section class="screen form-screen">
+      <div class="form-copy">
+        <p class="eyebrow">Step 1</p>
+        <h2>목표를 먼저 입력하세요</h2>
+        <p>매출, 신규 고객, 도달률, 브랜드 검색량처럼 광고주가 실제로 달성하려는 목표를 입력합니다.</p>
+      </div>
+      <div class="form-card">
+        <label for="goalInput">캠페인 목표</label>
+        <textarea id="goalInput">2026 H2 신규 고객 확보 및 브랜드 검색량 18% 상승</textarea>
+        <div class="chips">
+          <button>Reach Max</button>
+          <button>Search Lift</button>
+          <button>Revenue Assist</button>
+        </div>
+        <div class="form-actions">
+          <button class="secondary" data-back>이전</button>
+          <button class="primary" data-next>다음</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen form-screen">
+      <div class="form-copy">
+        <p class="eyebrow">Step 2</p>
+        <h2>회사와 시장 조건을 입력하세요</h2>
+        <p>DART/KOSIS API 또는 로컬 프록시에 반영되어 있으면 외부 신호를 반영하고, 없으면 mock snapshot으로 흐름을 유지합니다.</p>
+      </div>
+      <div class="form-grid">
+        <label>회사명<input id="companyInput" value="Korea Eundan"></label>
+        <label>시장/타깃<input id="marketInput" value="건강기능식품 / 전국 / 25-54"></label>
+        <label>현재 예산 기준<select id="budgetModeInput"><option value="with">현재 광고비 있음</option><option value="without">현재 광고비 없음</option></select></label>
+        <label>현재 광고비<input id="currentBudgetInput" type="number" value="12" min="1" step="0.1"><span>억원</span></label>
+        <label>목표 기간<select><option>다음 반기</option><option>다음 분기</option><option>연간</option></select></label>
+        <article class="api-snapshot wide" id="apiSnapshot">
+          <b>시장/타깃 데이터 연결</b>
+          <span>Open DART와 KOSIS 상태를 불러오는 중입니다.</span>
+        </article>
+        <div class="form-actions wide">
+          <button class="secondary" data-back>이전</button>
+          <button class="primary" data-next>분석 실행</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen analysis-screen">
+      <div class="loader"></div>
+      <p class="eyebrow">Analyzing mock scenario</p>
+      <h2>목표 광고비를 역산하고 있습니다</h2>
+      <div class="analysis-list">
+        <span>시장 반응 벤치마크 정렬</span>
+        <span>목표 달성률 곡선 시뮬레이션</span>
+        <span>Media Mix 제약 조건 계산</span>
+      </div>
+    </section>
+
+    <section class="screen dashboard">
+      <div class="dashboard-head">
+        <div>
+          <p class="eyebrow">Result Dashboard</p>
+          <h2>목표 달성을 위한 추천 광고예산</h2>
+        </div>
+        <button class="secondary" data-back>입력 수정</button>
+      </div>
+
+      <section class="metric-grid">
+        <article class="metric hero-metric">
+          <span>추천 광고비</span>
+          <strong id="recommendedBudget">18.5억</strong>
+          <small>목표 달성률과 효율 균형점</small>
+        </article>
+        <article class="metric">
+          <span>적정 범위</span>
+          <strong id="budgetRange">17.2억~20.1억</strong>
+          <small>SAFE~AGGRESSIVE 구간</small>
+        </article>
+        <article class="metric">
+          <span id="budgetGapTitle">추가 필요 예산</span>
+          <strong id="budgetGap">+6.5억</strong>
+          <small id="currentBudgetLabel">12억 대비</small>
+        </article>
+      </section>
+
+      <section class="engine-panel" id="enginePanel" aria-label="예산 산출 엔진">
+        <div class="panel-head">
+          <div>
+            <h3>산출 방식</h3>
+            <p>API 데이터가 들어오면 아래 순서로 목표 기준 광고비를 계산합니다.</p>
+          </div>
+          <span id="engineMode" class="band-label optimal">BUDGET GAP</span>
+        </div>
+        <div id="engineSteps" class="engine-steps"></div>
+        <div id="dataLineage" class="data-lineage"></div>
+        <div class="domestic-panel" aria-label="국내 매체 집행 패턴 연구">
+          <div class="panel-head compact">
+            <div>
+              <h3>국내 매체 집행 패턴 연구</h3>
+              <p>Naver, Kakao, TV, OOH는 국내 데이터 수급 방식과 집행 관성이 달라 별도 보정 레이어로 반영합니다.</p>
+            </div>
+            <span class="band-label optimal">LOCAL PATTERN</span>
+          </div>
+          <div id="domesticPatterns" class="domestic-patterns"></div>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="chart-panel">
+          <div class="panel-head">
+            <div>
+              <h3>광고비 대비 목표 달성률 Curve</h3>
+              <p>가로축은 광고비, 세로축은 목표 달성률입니다. Reach는 보조 추정 지표로만 표시합니다.</p>
+            </div>
+            <span id="whatIfBand" class="band-label optimal">OPTIMAL</span>
+          </div>
+          <svg id="goalCurve" viewBox="0 0 720 300" role="img" aria-label="광고비 대비 목표 달성률 Curve"></svg>
+          <div class="what-if">
+            <label for="budgetSlider">What-if Budget <b id="whatIfBudget">18.5억</b></label>
+            <input id="budgetSlider" type="range" min="10" max="25" step="0.1" value="18.5">
+            <div class="what-if-metrics">
+              <span>목표 달성률 <b id="whatIfGoal">100.2%</b></span>
+              <span>추가 효율 <b id="whatIfGoalMarginal">+1억당 +3.1%p</b></span>
+              <span>보조 Reach 추정 <b id="whatIfReach">70.2%</b></span>
+              <span>Marginal Reach <b id="whatIfMarginal">+1억당 +3.8%p</b></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="plans-panel">
+          <div class="panel-head">
+            <h3>3개 예산안</h3>
+          </div>
+          <div id="plans" class="plans"></div>
+        </article>
+      </section>
+
+      <section class="dashboard-grid bottom">
+        <article class="mix-panel">
+          <div class="panel-head">
+            <div>
+              <h3>추천 Media Mix</h3>
+              <p>YouTube 25% / TV 24% / Naver 21% / Kakao 12% / Meta 8% / OOH 10%</p>
+            </div>
+          </div>
+          <div id="mixList" class="mix-list"></div>
+        </article>
+        <article class="mix-panel">
+          <div class="panel-head">
+            <div>
+              <h3>현재 vs 추천 믹스</h3>
+              <p>회색은 현재, 파란색은 추천 비중입니다.</p>
+            </div>
+          </div>
+          <div id="mixCompare" class="compare-list"></div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
