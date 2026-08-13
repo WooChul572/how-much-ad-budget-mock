@@ -154,6 +154,38 @@ function markManualScenarioInputChanged() {
   aiEnrichment = null;
 }
 
+function resetAiSuggestedFields() {
+  [
+    '#goalCompanyInput',
+    '#goalBrandInput',
+    '#companyInput',
+    '#brandInput',
+    '#marketInput',
+    '#targetSegmentInput',
+    '#marketSizeInput',
+    '#targetShareInput',
+  ].forEach((selector) => {
+    const node = document.querySelector(selector);
+    if (node?.dataset.aiSuggested === 'true' && node.dataset.userEdited !== 'true') {
+      node.value = '';
+      node.dataset.aiSuggested = '';
+    }
+  });
+  document.querySelectorAll('.competitor-input').forEach((node) => {
+    if (node.dataset.aiSuggested === 'true' && node.dataset.userEdited !== 'true') {
+      node.value = '';
+      node.dataset.aiSuggested = '';
+    }
+  });
+  state.company = document.querySelector('#goalCompanyInput')?.dataset.userEdited === 'true' ? state.company : '';
+  state.brand = document.querySelector('#goalBrandInput')?.dataset.userEdited === 'true' ? state.brand : '';
+  state.market = '';
+  state.targetSegment = '';
+  state.competitors = [];
+  state.competitorMode = 'unknown';
+  competitorEdited = false;
+}
+
 function goHome() {
   syncFormInputsToState({ preferLandingGoal: state.step === 0 });
   syncVisibleInputsFromState();
@@ -254,15 +286,24 @@ function fillIfEmpty(selector, value) {
   return true;
 }
 
+function setAiSuggestedInput(selector, value) {
+  const node = document.querySelector(selector);
+  if (!node || value === undefined || value === null || value === '') return false;
+  if (node.dataset.userEdited === 'true') return false;
+  node.value = String(value).trim();
+  node.dataset.aiSuggested = 'true';
+  return true;
+}
+
 function applyEnrichmentField(stateKey, selectors, value) {
   if (value === undefined || value === null || value === '') return false;
   const cleanValue = String(value).trim();
   if (!cleanValue) return false;
   let applied = false;
   selectors.forEach((selector) => {
-    applied = fillIfEmpty(selector, cleanValue) || applied;
+    applied = setAiSuggestedInput(selector, cleanValue) || applied;
   });
-  if (!state[stateKey]) {
+  if (!state[stateKey] || applied) {
     state[stateKey] = cleanValue;
     applied = true;
   }
@@ -289,11 +330,13 @@ function applyEnrichmentToForm(enrichment) {
   setSelectValue('#lifecycleStageInput', enrichment.lifecycleStage);
 
   const competitorInputs = Array.from(document.querySelectorAll('.competitor-input'));
-  if (!competitorEdited && enrichment.competitors?.length && competitorInputs.every((input) => !input.value.trim())) {
+  if (enrichment.competitors?.length && competitorInputs.some((input) => input.dataset.userEdited !== 'true')) {
     state.competitorMode = 'known';
     competitorInputs.forEach((input, index) => {
+      if (input.dataset.userEdited === 'true') return;
       input.disabled = false;
       input.value = enrichment.competitors[index] || '';
+      input.dataset.aiSuggested = input.value ? 'true' : '';
     });
   }
   syncFormInputsToState();
@@ -687,24 +730,28 @@ function bindDynamicMarketInputs() {
   document.addEventListener('input', (event) => {
     if (event.target?.id === 'brandInput') {
       markScenarioInputChanged();
+      event.target.dataset.userEdited = 'true';
       state.brand = event.target.value;
       setInput('#goalBrandInput', event.target.value);
       renderAll();
     }
     if (event.target?.id === 'targetSegmentInput') {
       markScenarioInputChanged();
+      event.target.dataset.userEdited = 'true';
       state.targetSegment = event.target.value;
       state.targetType = inferTargetType(event.target.value);
       renderAll();
     }
     if (event.target?.id === 'marketInput') {
       markScenarioInputChanged();
+      event.target.dataset.userEdited = 'true';
       state.market = event.target.value;
       renderAll();
     }
     if (event.target?.classList?.contains('competitor-input')) {
       markScenarioInputChanged();
       competitorEdited = true;
+      event.target.dataset.userEdited = 'true';
       state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
         .map((node) => node.value.trim())
         .filter(Boolean)
@@ -965,30 +1012,35 @@ document.querySelector('.brand')?.addEventListener('click', (event) => {
 
 document.querySelector('#landingGoal')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
+  resetAiSuggestedFields();
   state.goal = event.target.value;
   setInput('#goalInput', event.target.value);
 });
 
 document.querySelector('#goalInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
+  resetAiSuggestedFields();
   state.goal = event.target.value;
   setInput('#landingGoal', event.target.value);
 });
 
 document.querySelector('#goalCompanyInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
+  event.target.dataset.userEdited = 'true';
   state.company = event.target.value;
   setInput('#companyInput', event.target.value);
 });
 
 document.querySelector('#goalBrandInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
+  event.target.dataset.userEdited = 'true';
   state.brand = event.target.value;
   setInput('#brandInput', event.target.value);
 });
 
 document.querySelector('#companyInput')?.addEventListener('input', (event) => {
   markScenarioInputChanged();
+  event.target.dataset.userEdited = 'true';
   state.company = event.target.value;
   setInput('#goalCompanyInput', event.target.value);
   renderAll();
