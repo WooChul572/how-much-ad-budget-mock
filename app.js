@@ -214,8 +214,8 @@ function syncFormInputsToState({ preferLandingGoal = false } = {}) {
   state.targetType = inferTargetType(`${state.market} ${state.targetSegment}`);
   state.competitionLevel = readValue('#competitionLevelInput') || state.competitionLevel;
   state.lifecycleStage = readValue('#lifecycleStageInput') || state.lifecycleStage;
-  state.marketRevenue = readNumber('#marketSizeInput', state.marketRevenue || 5000);
-  state.targetShare = readNumber('#targetShareInput', state.targetShare || 10);
+  state.marketRevenue = readNumber('#marketSizeInput', state.marketRevenue || 0);
+  state.targetShare = readNumber('#targetShareInput', state.targetShare || 0);
   syncCurrentAnnualBudget(readValue('#currentBudgetInput'));
   state.monthlyTvBudget = readNumber('#monthlyTvInput', 0);
   state.monthlyDigitalBudget = readNumber('#monthlyDigitalInput', 0);
@@ -243,6 +243,11 @@ function applyEnrichmentToForm(enrichment) {
   if (!enrichment) return;
   fillIfEmpty('#companyInput', enrichment.company);
   fillIfEmpty('#brandInput', enrichment.brand);
+  if (enrichment.sourceMode !== 'gemini-enriched') {
+    syncFormInputsToState();
+    renderAll();
+    return;
+  }
   fillIfEmpty('#marketInput', enrichment.market);
   fillIfEmpty('#targetSegmentInput', enrichment.targetSegment);
   fillIfEmpty('#marketSizeInput', enrichment.marketRevenue);
@@ -275,10 +280,10 @@ function renderEnrichmentStatus(enrichment = aiEnrichment) {
     target.innerHTML = '<b>AI 자동 보강</b><span>목표에 광고주명과 브랜드명이 있으면 Step 2에서 빈 칸을 자동으로 채웁니다.</span>';
     return;
   }
-  const mode = enrichment.sourceMode === 'gemini-enriched' ? 'Gemini 분석' : 'Fallback 추정';
+  const mode = enrichment.sourceMode === 'gemini-enriched' ? 'Gemini 분석' : 'Gemini 연결 필요';
   const competitors = enrichment.competitors?.length ? enrichment.competitors.join(', ') : '경쟁사 모름';
   target.innerHTML = `
-    <b>${mode} 반영 · 신뢰도 ${enrichment.confidence ?? 60}%</b>
+    <b>${mode}${enrichment.sourceMode === 'gemini-enriched' ? ` · 신뢰도 ${enrichment.confidence ?? 60}%` : ''}</b>
     <span>${enrichment.company || '회사 미확정'} / ${enrichment.brand || '브랜드 미확정'} · ${enrichment.market || '시장 미확정'} · ${enrichment.targetSegment || '타겟 미확정'}</span>
     <span>경쟁사: ${competitors}</span>
     <span>${enrichment.rationale || 'AI/벤치마크 기반으로 빈 입력값을 보강했습니다.'}</span>
@@ -369,7 +374,7 @@ function drawGoalCurve() {
 
 function renderMix(scenario = getCurrentScenario()) {
   const list = document.querySelector('#mixList');
-  const mixBudget = scenario.recommendedBudget;
+  const mixBudget = state.budget || scenario.recommendedBudget;
   if (list) {
     list.innerHTML = getScaledMix(mixBudget, scenario).map((item) => `
       <div class="mix-row">
@@ -472,6 +477,7 @@ function renderScenarioSummary(scenario = getCurrentScenario()) {
     : state.competitorMode === 'none'
       ? '경쟁사 없음'
       : '경쟁사 모름';
+  const band = getBudgetBand(state.budget || scenario.recommendedBudget);
 
   const items = [
     ['입력 목표', state.goal || '미입력'],
@@ -479,6 +485,7 @@ function renderScenarioSummary(scenario = getCurrentScenario()) {
     ['시장 / 타겟', marketTarget],
     ['조건', `${competitionLabels[state.competitionLevel] || state.competitionLevel} · ${stageLabels[state.lifecycleStage] || state.lifecycleStage}`],
     ['현재 예산', currentBudgetText],
+    ['선택 예산안', `${band.label} · ${formatWon(state.budget || scenario.recommendedBudget)}`],
     ['경쟁사', competitorText],
   ];
 
