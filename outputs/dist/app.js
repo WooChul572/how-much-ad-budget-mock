@@ -138,8 +138,9 @@ function syncWhatIfToRecommendation(scenario = getCurrentScenario()) {
 
 function updateSliderBounds(scenario) {
   if (!slider) return;
-  const min = Math.max(1, Math.floor(scenario.range[0] * 0.6));
-  const max = Math.max(25, Math.ceil(scenario.range[1] * 1.15));
+  const recommended = Number(scenario.recommendedBudget || state.budget || 16.4);
+  const min = Math.max(1, Math.floor(Math.min(scenario.range[0], recommended) * 0.72));
+  const max = Math.max(min + 8, Math.ceil(Math.max(scenario.range[1], recommended) * 1.12));
   slider.min = String(min);
   slider.max = String(max);
 }
@@ -412,12 +413,12 @@ function drawGoalCurve() {
   const scenario = getCurrentScenario();
   const width = 720;
   const height = 300;
-  const minBudget = Math.max(1, Math.floor((scenario.range?.[0] ?? 10) * 0.72));
-  const maxBudget = Math.max(minBudget + 8, Math.ceil((scenario.range?.[1] ?? 25) * 1.18));
   const optimalBudget = scenario.recommendedBudget || state.budget || 16.4;
-  const selectedBudget = Math.max(minBudget, Math.min(maxBudget, state.budget || optimalBudget));
   const lowerRange = scenario.range?.[0] ?? optimalBudget * 0.72;
   const upperRange = scenario.range?.[1] ?? optimalBudget * 1.18;
+  const minBudget = Math.max(1, Math.floor(Math.min(lowerRange, optimalBudget) * 0.72));
+  const maxBudget = Math.max(minBudget + 8, Math.ceil(Math.max(upperRange, optimalBudget) * 1.12));
+  const selectedBudget = Math.max(minBudget, Math.min(maxBudget, state.budget || optimalBudget));
   const goalValue = (budget) => {
     const value = Number(budget);
     if (value <= optimalBudget) {
@@ -436,6 +437,10 @@ function drawGoalCurve() {
   const area = `${path} L ${width - 44} ${height - 46} L 44 ${height - 46} Z`;
   const selectedX = xForBudget(selectedBudget);
   const selectedY = yForGoal(goalValue(selectedBudget));
+  const rangeStartX = xForBudget(Math.max(minBudget, lowerRange));
+  const rangeEndX = xForBudget(Math.min(maxBudget, upperRange));
+  const softenStart = Math.max(optimalBudget * 1.08, upperRange);
+  const softenStartX = xForBudget(Math.min(maxBudget, softenStart));
 
   svg.innerHTML = `
     <defs>
@@ -450,16 +455,16 @@ function drawGoalCurve() {
       return `<line x1="44" y1="${y}" x2="${width - 44}" y2="${y}" stroke="#e5e9f2"/><text x="16" y="${y + 4}" font-size="11" fill="#667085">${label}%</text>`;
     }).join('')}
     <line x1="44" y1="${height - 46 - ((100 - 50) / 75) * (height - 82)}" x2="${width - 44}" y2="${height - 46 - ((100 - 50) / 75) * (height - 82)}" stroke="#1e63ff" stroke-width="1.5" stroke-dasharray="6 6"/>
-    <rect x="${((scenario.range[0] - 10) / 15) * (width - 88) + 44}" y="34" width="${((scenario.range[1] - scenario.range[0]) / 15) * (width - 88)}" height="${height - 80}" fill="#f2f6ff"/>
-    <rect x="${((20 - 10) / 15) * (width - 88) + 44}" y="34" width="${((25 - 20) / 15) * (width - 88)}" height="${height - 80}" fill="#f7f8fb"/>
-    <text x="${((scenario.range[0] - 10) / 15) * (width - 88) + 54}" y="58" font-size="12" fill="#2557d6">목표 달성 권장 범위</text>
-    <text x="${((20 - 10) / 15) * (width - 88) + 54}" y="78" font-size="12" fill="#475467">추가 효율 둔화</text>
+    <rect x="${rangeStartX}" y="34" width="${Math.max(0, rangeEndX - rangeStartX)}" height="${height - 80}" fill="#f2f6ff"/>
+    <rect x="${softenStartX}" y="34" width="${Math.max(0, width - 44 - softenStartX)}" height="${height - 80}" fill="#f7f8fb"/>
+    <text x="${Math.min(rangeStartX + 10, width - 180)}" y="58" font-size="12" fill="#2557d6">목표 달성 권장 범위</text>
+    <text x="${Math.min(softenStartX + 10, width - 150)}" y="78" font-size="12" fill="#475467">추가 효율 둔화</text>
     <path d="${area}" fill="url(#curveFill)"/>
     <path d="${path}" fill="none" stroke="#1e63ff" stroke-width="4" stroke-linecap="round"/>
     <line x1="${selectedX}" y1="34" x2="${selectedX}" y2="${height - 46}" stroke="#111827" stroke-width="1.5" stroke-dasharray="5 6"/>
     <circle cx="${selectedX}" cy="${selectedY}" r="7" fill="#111827" stroke="#fff" stroke-width="4"/>
-    <text x="44" y="${height - 18}" font-size="12" fill="#667085">10억</text>
-    <text x="${width - 82}" y="${height - 18}" font-size="12" fill="#667085">25억</text>
+    <text x="44" y="${height - 18}" font-size="12" fill="#667085">${formatWon(minBudget)}</text>
+    <text x="${width - 92}" y="${height - 18}" font-size="12" fill="#667085">${formatWon(maxBudget)}</text>
   `;
 }
 
@@ -859,13 +864,15 @@ function renderBudgetPeriodLabels(scenario = getCurrentScenario()) {
 function renderApiStatus(status) {
   const targets = document.querySelectorAll('[data-api-status]');
   if (!targets.length) return;
-  const dart = status?.providers?.dart?.configured;
-  const kosis = status?.providers?.kosis?.configured;
-  const gemini = status?.providers?.gemini?.configured;
+  const labelFor = (provider) => {
+    if (provider?.configured) return '연결됨';
+    if (status?.localStatic) return '배포에서 확인';
+    return '미설정';
+  };
   const html = `
-    <em>Open DART ${dart ? '연결됨' : '미설정'}</em>
-    <em>KOSIS ${kosis ? '연결됨' : '미설정'}</em>
-    <em>Gemini ${gemini ? '연결됨' : '미설정'}</em>
+    <em>Open DART ${labelFor(status?.providers?.dart)}</em>
+    <em>KOSIS ${labelFor(status?.providers?.kosis)}</em>
+    <em>Gemini ${labelFor(status?.providers?.gemini)}</em>
   `;
   targets.forEach((target) => {
     target.innerHTML = html;
@@ -887,6 +894,7 @@ function renderApiSnapshot(snapshot) {
 async function loadApiContext() {
   try {
     const statusResponse = await fetch('/api/status');
+    if (!statusResponse.ok) throw new Error(`status ${statusResponse.status}`);
     const status = await statusResponse.json();
     renderApiStatus(status);
 
@@ -896,6 +904,7 @@ async function loadApiContext() {
       target: '전국 25-54',
     });
     const snapshotResponse = await fetch(`/api/market-snapshot?${params}`);
+    if (!snapshotResponse.ok) throw new Error(`market snapshot ${snapshotResponse.status}`);
     const snapshot = await snapshotResponse.json();
     if (snapshot?.scenarioAdjustments) {
       if (!state.market && snapshot.scenarioAdjustments.market) state.market = snapshot.scenarioAdjustments.market;
@@ -905,7 +914,15 @@ async function loadApiContext() {
     }
     renderApiSnapshot(snapshot);
   } catch {
-    renderApiStatus({ providers: { dart: { configured: false }, kosis: { configured: false } } });
+    const isLocalStatic = ['127.0.0.1', 'localhost', ''].includes(window.location.hostname);
+    renderApiStatus({
+      localStatic: isLocalStatic,
+      providers: {
+        dart: { configured: false },
+        kosis: { configured: false },
+        gemini: { configured: false },
+      },
+    });
     const target = document.querySelector('#apiSnapshot');
     if (target) {
       target.innerHTML = `
