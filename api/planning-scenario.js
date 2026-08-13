@@ -1,40 +1,55 @@
+import { buildPlanningScenario } from '../howmuch-data.mjs';
+
+function toNumber(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  return value === true || value === 'true' || value === '1' || value === 'yes';
+}
+
+function toList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value).split(',').map((item) => item.trim()).filter(Boolean);
+}
+
 export default function handler(request, response) {
-  const hasCurrentBudget = request.query.hasCurrentBudget !== 'false';
-  const currentBudget = hasCurrentBudget ? Number(request.query.currentBudget || 12) : null;
-  const recommendedBudget = 18.5;
-  const safeBudget = 17.2;
-  const aggressiveBudget = 20.1;
-  const incrementalBudget = hasCurrentBudget ? Math.round(Math.max(0, recommendedBudget - currentBudget) * 10) / 10 : null;
+  const query = request.query ?? {};
+  const scenario = buildPlanningScenario({
+    currentBudget: toNumber(query.currentBudget, 0),
+    hasCurrentBudget: toBoolean(query.hasCurrentBudget, false),
+    targetGoal: query.targetGoal || query.goal || '',
+    company: query.company || '',
+    brand: query.brand || '',
+    market: query.market || '',
+    targetSegment: query.targetSegment || '',
+    competitionLevel: query.competitionLevel || 'unknown',
+    targetType: query.targetType || 'mass',
+    lifecycleStage: query.lifecycleStage || 'launch',
+    marketRevenue: toNumber(query.marketRevenue, 5000),
+    targetShare: toNumber(query.targetShare, 10),
+    monthlyTvBudget: toNumber(query.monthlyTvBudget, 0),
+    monthlyDigitalBudget: toNumber(query.monthlyDigitalBudget, 0),
+    grossMargin: toNumber(query.grossMargin, 52),
+    requiredRoas: toNumber(query.requiredRoas, 1.8),
+    customerLtv: toNumber(query.customerLtv, 42),
+    conversionRate: toNumber(query.conversionRate, 2.6),
+    competitorMode: query.competitorMode || 'unknown',
+    competitors: toList(query.competitors),
+  });
 
   response.status(200).json({
-    mode: hasCurrentBudget ? 'gap-analysis' : 'zero-base-sizing',
-    decision: hasCurrentBudget ? 'increase-budget' : 'new-budget',
-    currentBudget,
-    recommendedBudget,
-    range: [safeBudget, aggressiveBudget],
-    incrementalBudget,
-    confidence: 83,
-    dataLineage: [
-      { provider: 'DART', data: 'Company profile, disclosures, financial data', usage: 'Company scale and investment capacity', status: 'configured' },
-      { provider: 'KOSIS', data: 'Market size, population, target scale', usage: 'TAM/SAM and targetable population', status: 'configured' },
-      { provider: 'KOBACO ADSTAT/MCR', data: 'Ad spend and media/contact benchmark', usage: 'Category intensity and media benchmark', status: 'benchmark' },
-      { provider: 'Advertiser Spend Benchmark', data: 'Advertiser/category spend distribution', usage: 'Competitive budget percentile and minimum-spend calibration', status: 'applied' },
-      { provider: 'Naver SearchAd API', data: 'Impressions, clicks, cost, conversions, top impression ratio', usage: 'Search-demand and lower-funnel budget calibration', status: 'optional' },
-      { provider: 'Kakao Moment API', data: 'Campaign, ad group, creative, targeting, placement, hour reports', usage: 'Kakao reach, message, and CRM-frequency calibration', status: 'optional' },
-      { provider: 'MMM Literature', data: 'Adstock, carryover, saturation, Bayesian prior, calibration', usage: 'Goal response curve and budget optimization formula', status: 'applied' },
-    ],
-    engineSteps: [
-      { name: 'Market Sizing Engine', input: 'KOSIS market size + target population', output: 'Market base budget KRW 1.54B' },
-      { name: 'Adstock Carryover Transform', input: 'Jin et al. 2017 + LightweightMMM carryover', output: 'Lag-adjusted media response' },
-      { name: 'Hill Saturation Transform', input: 'Hill-Adstock / shape effect response curve', output: 'Diminishing-return adjusted response' },
-      { name: 'Domestic Media Pattern Engine', input: 'KOBACO ADSTAT + Naver SearchAd + Kakao Moment + TV/OOH benchmark', output: 'Korean media-pattern adjustment 1.035x' },
-      { name: 'Advertiser Benchmark Engine', input: 'Advertiser/category spend distribution', output: 'Competitive percentile and budget floor adjustment' },
-      { name: 'Company Capacity Engine', input: 'DART company/disclosure data', output: 'Investment capacity factor 1.00x' },
-      { name: 'Investment Benchmark Engine', input: 'KOBACO and platform benchmark', output: 'Competition factor 1.12x' },
-      { name: 'Goal Response Engine', input: 'Goal difficulty + market scale + Bayesian prior calibration', output: 'Recommended budget KRW 1.85B' },
-      { name: 'Budget Optimizer', input: 'Monte Carlo / differential evolution budget allocation logic', output: 'Decision range KRW 1.72B-2.01B' },
-      { name: 'Media Mix Allocator', input: 'Domestic media pattern + channel benchmark + goal type', output: 'YouTube/TV/Naver/Kakao/Meta/OOH allocation' },
-      { name: hasCurrentBudget ? 'Budget Gap Analyzer' : 'Zero-base Budget Sizer', input: hasCurrentBudget ? `Current budget KRW ${currentBudget}B` : 'No current budget', output: hasCurrentBudget ? `Incremental need KRW ${incrementalBudget}B` : 'New budget plan' },
-    ],
+    ...scenario,
+    sourceMode: 'api-engine',
+    apiInputs: {
+      dartConfigured: Boolean(process.env.DART_API_KEY),
+      kosisConfigured: Boolean(process.env.KOSIS_API_KEY),
+      liveDataApplied: false,
+      note: 'Current endpoint runs the HOW MUCH planning engine on API/server side. DART/KOSIS keys are detected through Vercel env vars; live provider fetch can replace mock benchmark inputs in the next integration step.',
+    },
   });
 }

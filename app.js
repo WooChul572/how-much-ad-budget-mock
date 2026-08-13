@@ -26,8 +26,8 @@ const state = {
   lifecycleStage: 'launch',
   marketRevenue: 5000,
   targetShare: 10,
-  monthlyTvBudget: 12,
-  monthlyDigitalBudget: 14,
+  monthlyTvBudget: 0,
+  monthlyDigitalBudget: 0,
   grossMargin: 52,
   requiredRoas: 1.8,
   customerLtv: 42,
@@ -39,12 +39,15 @@ const state = {
 const steps = Array.from(document.querySelectorAll('.screen'));
 const progressSteps = Array.from(document.querySelectorAll('.step-dot'));
 const slider = document.querySelector('#budgetSlider');
+let whatIfTouched = false;
+let apiScenario = null;
 
 function formatWon(value) {
   return `${Number(value).toFixed(1).replace('.0', '')}억`;
 }
 
 function getCurrentScenario() {
+  if (apiScenario) return apiScenario;
   return buildPlanningScenario({
     currentBudget: state.currentBudget,
     hasCurrentBudget: state.hasCurrentBudget,
@@ -97,6 +100,48 @@ function syncCurrentAnnualBudget(value) {
   state.hasCurrentBudget = annualBudget > 0;
   state.monthlyTvBudget = 0;
   state.monthlyDigitalBudget = annualBudget > 0 ? annualBudget / 12 : 0;
+}
+
+function parseGoalHints(goal) {
+  const text = String(goal || '').trim();
+  const brandMatch = text.match(/^([가-힣A-Za-z0-9·&\-\s]{2,20}?)(?:\s+\d|\s+매출|\s+신규|\s+인지|\s+방문|\s+검색)/);
+  const revenueMatch = text.match(/(\d+(?:\.\d+)?)\s*억(?:원)?\s*(?:매출|상승|증대|달성)?/);
+  return {
+    brand: brandMatch ? brandMatch[1].trim() : '',
+    targetShare: revenueMatch ? Math.max(1, Math.min(50, Math.round(Number(revenueMatch[1]) / 10))) : null,
+  };
+}
+
+function applyGoalHintsToMarketForm() {
+  const hints = parseGoalHints(state.goal);
+  if (hints.brand && !state.brand) {
+    state.brand = hints.brand;
+    setInput('#brandInput', hints.brand);
+  }
+  if (hints.targetShare && !document.querySelector('#targetShareInput')?.value) {
+    state.targetShare = hints.targetShare;
+    setInput('#targetShareInput', String(hints.targetShare));
+  }
+}
+
+function syncWhatIfToRecommendation(scenario = getCurrentScenario()) {
+  if (whatIfTouched) return scenario;
+  state.budget = scenario.recommendedBudget;
+  if (slider) slider.value = String(state.budget);
+  return scenario;
+}
+
+function updateSliderBounds(scenario) {
+  if (!slider) return;
+  const min = Math.max(1, Math.floor(scenario.range[0] * 0.6));
+  const max = Math.max(25, Math.ceil(scenario.range[1] * 1.15));
+  slider.min = String(min);
+  slider.max = String(max);
+}
+
+function markScenarioInputChanged() {
+  whatIfTouched = false;
+  apiScenario = null;
 }
 
 function goHome() {
@@ -208,8 +253,7 @@ function renderPlans(scenario = getCurrentScenario()) {
   `).join('');
 }
 
-function renderMetrics() {
-  const scenario = getCurrentScenario();
+function renderMetrics(scenario = getCurrentScenario()) {
   setText('#recommendedBudget', formatWon(scenario.recommendedBudget));
   setText('#budgetRange', `${formatWon(scenario.range[0])}~${formatWon(scenario.range[1])}`);
   if (state.hasCurrentBudget) {
@@ -238,7 +282,8 @@ function renderMetrics() {
 function renderEnginePanel(scenario) {
   const mode = document.querySelector('#engineMode');
   if (mode) {
-    mode.textContent = scenario.mode === 'gap-analysis' ? 'BUDGET GAP' : 'ZERO-BASE';
+    const modeText = scenario.mode === 'gap-analysis' ? 'BUDGET GAP' : 'ZERO-BASE';
+    mode.textContent = scenario.sourceMode === 'api-engine' ? `API ENGINE · ${modeText}` : modeText;
     mode.className = `band-label ${scenario.mode === 'gap-analysis' ? 'optimal' : 'safe'}`;
   }
 
@@ -306,8 +351,9 @@ function renderEnginePanel(scenario) {
 }
 
 function renderAll() {
-  const scenario = getCurrentScenario();
-  renderMetrics();
+  const scenario = syncWhatIfToRecommendation(getCurrentScenario());
+  updateSliderBounds(scenario);
+  renderMetrics(scenario);
   renderPlans(scenario);
   renderMix(scenario);
   drawGoalCurve();
@@ -387,19 +433,23 @@ function bindDynamicMarketInputs() {
 
   document.addEventListener('input', (event) => {
     if (event.target?.id === 'brandInput') {
+      markScenarioInputChanged();
       state.brand = event.target.value;
       renderAll();
     }
     if (event.target?.id === 'targetSegmentInput') {
+      markScenarioInputChanged();
       state.targetSegment = event.target.value;
       state.targetType = inferTargetType(event.target.value);
       renderAll();
     }
     if (event.target?.id === 'marketInput') {
+      markScenarioInputChanged();
       state.market = event.target.value;
       renderAll();
     }
     if (event.target?.classList?.contains('competitor-input')) {
+      markScenarioInputChanged();
       if (state.competitorMode !== 'known') {
         state.competitors = [];
       } else {
@@ -414,6 +464,7 @@ function bindDynamicMarketInputs() {
 
   document.addEventListener('change', (event) => {
     if (event.target?.id === 'competitorModeInput') {
+      markScenarioInputChanged();
       state.competitorMode = event.target.value;
       if (state.competitorMode !== 'known') state.competitors = [];
       updateCompetitorFieldState();
@@ -501,10 +552,11 @@ function renderApiStatus(status) {
 function renderApiSnapshot(snapshot) {
   const target = document.querySelector('#apiSnapshot');
   if (!target) return;
+  const isMock = /mock/i.test(`${snapshot.marketSize?.source ?? ''} ${snapshot.targetPopulation?.source ?? ''} ${snapshot.companyData?.source ?? ''} ${snapshot.note ?? ''}`);
   target.innerHTML = `
     <b>시장/타깃 데이터 연결</b>
     <span>시장 규모 ${snapshot.marketSize.value} · 타깃 규모 ${snapshot.targetPopulation.value}</span>
-    <span>DART/KOSIS 키 상태를 확인했고, 현재 목업은 live API 대신 검증용 mock snapshot을 사용합니다.</span>
+    <span>${isMock ? '현재 응답은 검증용 mock snapshot입니다. API 키가 Vercel 환경변수에 설정되면 live 데이터로 대체 가능합니다.' : 'DART/KOSIS API 응답을 반영했습니다.'}</span>
     <span>실서비스 단계에서는 기업/시장/타깃/경쟁사별 API 응답값으로 예산 계수를 갱신합니다.</span>
   `;
 }
@@ -529,9 +581,49 @@ async function loadApiContext() {
     if (target) {
       target.innerHTML = `
         <b>시장/타깃 데이터 연결</b>
-        <span>로컬 API 프록시에 연결하지 못해 mock snapshot을 사용 중입니다.</span>
+        <span>현재 로컬 정적 서버에서는 /api 함수가 실행되지 않아 mock snapshot 기준으로 표시됩니다.</span>
+        <span>Vercel 배포 환경에서 api 폴더와 DART/KOSIS 환경변수를 함께 올리면 API 상태를 확인할 수 있습니다.</span>
       `;
     }
+  }
+}
+
+function buildScenarioParams() {
+  return new URLSearchParams({
+    currentBudget: String(state.currentBudget),
+    hasCurrentBudget: String(state.hasCurrentBudget),
+    targetGoal: state.goal,
+    company: state.company,
+    brand: state.brand,
+    market: state.market,
+    targetSegment: state.targetSegment,
+    competitionLevel: state.competitionLevel,
+    targetType: state.targetType,
+    lifecycleStage: state.lifecycleStage,
+    marketRevenue: String(state.marketRevenue),
+    targetShare: String(state.targetShare),
+    monthlyTvBudget: String(state.monthlyTvBudget),
+    monthlyDigitalBudget: String(state.monthlyDigitalBudget),
+    grossMargin: String(state.grossMargin),
+    requiredRoas: String(state.requiredRoas),
+    customerLtv: String(state.customerLtv),
+    conversionRate: String(state.conversionRate),
+    competitorMode: state.competitorMode,
+    competitors: state.competitors.join(','),
+  });
+}
+
+async function loadPlanningScenarioFromApi() {
+  try {
+    const response = await fetch(`/api/planning-scenario?${buildScenarioParams()}`);
+    if (!response.ok) throw new Error(`planning scenario ${response.status}`);
+    apiScenario = await response.json();
+    renderAll();
+    return true;
+  } catch {
+    apiScenario = null;
+    renderAll();
+    return false;
   }
 }
 
@@ -541,8 +633,10 @@ function setText(selector, text) {
 }
 
 document.querySelectorAll('[data-next]').forEach((button) => {
-  button.addEventListener('click', () => {
+  button.addEventListener('click', async () => {
     if (state.step === 0) syncLandingGoalToForm();
+    if (state.step === 1) applyGoalHintsToMarketForm();
+    if (state.step === 2) await loadPlanningScenarioFromApi();
     showStep(state.step + 1);
   });
 });
@@ -589,80 +683,98 @@ document.querySelector('.brand')?.addEventListener('click', (event) => {
 });
 
 document.querySelector('#landingGoal')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.goal = event.target.value;
   setInput('#goalInput', event.target.value);
 });
 
 document.querySelector('#goalInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.goal = event.target.value;
 });
 
 document.querySelector('#companyInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.company = event.target.value;
+  renderAll();
   loadApiContext();
 });
 
 document.querySelector('#marketInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.market = event.target.value;
+  renderAll();
   loadApiContext();
 });
 
 document.querySelector('#targetTypeInput')?.addEventListener('change', (event) => {
+  markScenarioInputChanged();
   state.targetType = event.target.value;
   renderAll();
 });
 
 document.querySelector('#competitionLevelInput')?.addEventListener('change', (event) => {
+  markScenarioInputChanged();
   state.competitionLevel = event.target.value;
   renderAll();
 });
 
 document.querySelector('#lifecycleStageInput')?.addEventListener('change', (event) => {
+  markScenarioInputChanged();
   state.lifecycleStage = event.target.value;
   renderAll();
 });
 
 document.querySelector('#marketSizeInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.marketRevenue = Number(event.target.value || 5000);
   renderAll();
 });
 
 document.querySelector('#targetShareInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.targetShare = Number(event.target.value || 10);
   renderAll();
 });
 
 document.querySelector('#monthlyTvInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.monthlyTvBudget = Number(event.target.value || 0);
   renderAll();
 });
 
 document.querySelector('#monthlyDigitalInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.monthlyDigitalBudget = Number(event.target.value || 0);
   renderAll();
 });
 
 document.querySelector('#grossMarginInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.grossMargin = Number(event.target.value || 52);
   renderAll();
 });
 
 document.querySelector('#requiredRoasInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.requiredRoas = Number(event.target.value || 1.8);
   renderAll();
 });
 
 document.querySelector('#customerLtvInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.customerLtv = Number(event.target.value || 42);
   renderAll();
 });
 
 document.querySelector('#conversionRateInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   state.conversionRate = Number(event.target.value || 2.6);
   renderAll();
 });
 
 document.querySelector('#budgetModeInput')?.addEventListener('change', (event) => {
+  markScenarioInputChanged();
   state.hasCurrentBudget = event.target.value === 'with';
   const currentBudgetInput = document.querySelector('#currentBudgetInput');
   if (currentBudgetInput) currentBudgetInput.disabled = !state.hasCurrentBudget;
@@ -670,11 +782,13 @@ document.querySelector('#budgetModeInput')?.addEventListener('change', (event) =
 });
 
 document.querySelector('#currentBudgetInput')?.addEventListener('input', (event) => {
+  markScenarioInputChanged();
   syncCurrentAnnualBudget(event.target.value);
   renderAll();
 });
 
 slider?.addEventListener('input', (event) => {
+  whatIfTouched = true;
   state.budget = Number(event.target.value);
   renderAll();
 });
@@ -682,6 +796,7 @@ slider?.addEventListener('input', (event) => {
 document.querySelector('#plans')?.addEventListener('click', (event) => {
   const card = event.target.closest('[data-budget]');
   if (!card) return;
+  whatIfTouched = true;
   state.budget = Number(card.dataset.budget);
   if (slider) slider.value = String(state.budget);
   renderAll();

@@ -188,8 +188,8 @@ export function buildPlanningScenario(options = {}) {
   const competitorMode = options.competitorMode ?? (competitors.length ? 'known' : 'unknown');
   const marketRevenue = Number(options.marketRevenue ?? 5000);
   const targetShare = Number(options.targetShare ?? 10);
-  const monthlyTvBudget = Number(options.monthlyTvBudget ?? 12);
-  const monthlyDigitalBudget = Number(options.monthlyDigitalBudget ?? 14);
+  const monthlyTvBudget = Number(options.monthlyTvBudget ?? 0);
+  const monthlyDigitalBudget = Number(options.monthlyDigitalBudget ?? 0);
   const grossMargin = Number(options.grossMargin ?? 52);
   const averageOrderValue = Number(options.averageOrderValue ?? 18);
   const customerLtv = Number(options.customerLtv ?? 42);
@@ -330,7 +330,8 @@ export function buildPlanningScenario(options = {}) {
 
 export function parseGoalValue(goal = '') {
   const text = String(goal).replace(/,/g, '');
-  const revenueMatch = text.match(/(?:매출|판매|Revenue|revenue)[^\d]*(\d+(?:\.\d+)?)\s*(조|천억|백억|억|만원)?/);
+  const revenueMatch = text.match(/(?:매출|판매|Revenue|revenue)[^\d]*(\d+(?:\.\d+)?)\s*(조|천억|백억|억|만원)?/)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*(조|천억|백억|억|만원)?\s*(?:매출|판매|Revenue|revenue)/);
   if (revenueMatch) {
     const raw = Number(revenueMatch[1]);
     const unit = revenueMatch[2] ?? '억';
