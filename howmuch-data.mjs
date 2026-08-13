@@ -542,10 +542,17 @@ export function getScenarioMix(budget, goalProfile = goalProfiles.acquisition, t
 }
 
 export function getScaledMix(budget, scenario) {
-  if (scenario?.mediaMix) return scenario.mediaMix.map((item) => ({
-    ...item,
-    scaledAmount: round((Number(budget) * item.percent) / 100),
-  }));
+  if (scenario?.mediaMix) {
+    const totalBudget = Number(budget);
+    return scenario.mediaMix.map((item) => ({
+      ...item,
+      scaledAmount: round((totalBudget * item.percent) / 100),
+    })).map((item, index, list) => {
+      if (index !== list.length - 1) return item;
+      const used = list.slice(0, -1).reduce((sum, other) => sum + other.scaledAmount, 0);
+      return { ...item, scaledAmount: round(totalBudget - used) };
+    });
+  }
   return getScenarioMix(budget);
 }
 

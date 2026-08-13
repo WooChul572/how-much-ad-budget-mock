@@ -159,8 +159,9 @@ function drawGoalCurve() {
 
 function renderMix(scenario = getCurrentScenario()) {
   const list = document.querySelector('#mixList');
+  const mixBudget = scenario.recommendedBudget;
   if (list) {
-    list.innerHTML = getScaledMix(state.budget, scenario).map((item) => `
+    list.innerHTML = getScaledMix(mixBudget, scenario).map((item) => `
       <div class="mix-row">
         <div class="mix-channel">
           <span class="swatch" style="background:${item.color}"></span>
