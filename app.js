@@ -466,8 +466,9 @@ function drawGoalCurve() {
 function renderMix(scenario = getCurrentScenario()) {
   const list = document.querySelector('#mixList');
   const mixBudget = state.budget || scenario.recommendedBudget;
+  const scaledMix = getScaledMix(mixBudget, scenario);
   if (list) {
-    list.innerHTML = getScaledMix(mixBudget, scenario).map((item) => `
+    list.innerHTML = scaledMix.map((item) => `
       <div class="mix-row">
         <div class="mix-channel">
           <span class="swatch" style="background:${item.color}"></span>
@@ -483,7 +484,7 @@ function renderMix(scenario = getCurrentScenario()) {
 
   const comparison = document.querySelector('#mixCompare');
   if (comparison) {
-    comparison.innerHTML = scenario.mediaMix.map((item) => `
+    comparison.innerHTML = scaledMix.map((item) => `
       <div class="compare-row">
         <span>${item.channel}</span>
         <div class="compare-bars">
@@ -856,16 +857,19 @@ function renderBudgetPeriodLabels(scenario = getCurrentScenario()) {
 }
 
 function renderApiStatus(status) {
-  const target = document.querySelector('#apiStatus');
-  if (!target) return;
+  const targets = document.querySelectorAll('[data-api-status]');
+  if (!targets.length) return;
   const dart = status?.providers?.dart?.configured;
   const kosis = status?.providers?.kosis?.configured;
   const gemini = status?.providers?.gemini?.configured;
-  target.innerHTML = `
+  const html = `
     <em>Open DART ${dart ? '연결됨' : '미설정'}</em>
     <em>KOSIS ${kosis ? '연결됨' : '미설정'}</em>
     <em>Gemini ${gemini ? '연결됨' : '미설정'}</em>
   `;
+  targets.forEach((target) => {
+    target.innerHTML = html;
+  });
 }
 
 function renderApiSnapshot(snapshot) {

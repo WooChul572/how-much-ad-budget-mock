@@ -547,10 +547,34 @@ export function getScenarioMix(budget, goalProfile = goalProfiles.acquisition, t
 export function getScaledMix(budget, scenario) {
   if (scenario?.mediaMix) {
     const totalBudget = Number(budget);
-    return scenario.mediaMix.map((item) => ({
+    const recommended = Number(scenario.recommendedBudget || totalBudget || 1);
+    const budgetRatio = totalBudget / Math.max(1, recommended);
+    const budgetMixShift = {
+      YouTube: budgetRatio < 0.85 ? -3 : budgetRatio > 1.12 ? 4 : 0,
+      TV: budgetRatio < 0.85 ? -6 : budgetRatio > 1.12 ? 6 : 0,
+      Naver: budgetRatio < 0.85 ? 6 : budgetRatio > 1.12 ? -4 : 0,
+      Kakao: budgetRatio < 0.85 ? 3 : budgetRatio > 1.12 ? -1 : 0,
+      Meta: budgetRatio < 0.85 ? 2 : budgetRatio > 1.12 ? -2 : 0,
+      OOH: budgetRatio < 0.85 ? -2 : budgetRatio > 1.12 ? 3 : 0,
+    };
+    const adjusted = scenario.mediaMix.map((item) => ({
       ...item,
-      scaledAmount: round((totalBudget * item.percent) / 100),
+      percent: Math.max(3, item.percent + (budgetMixShift[item.channel] ?? 0)),
+    }));
+    const totalPercent = adjusted.reduce((sum, item) => sum + item.percent, 0);
+    return adjusted.map((item) => ({
+      ...item,
+      percent: Math.round((item.percent / totalPercent) * 100),
     })).map((item, index, list) => {
+      const percent = index === list.length - 1
+        ? 100 - list.slice(0, -1).reduce((sum, other) => sum + other.percent, 0)
+        : item.percent;
+      return {
+        ...item,
+        percent,
+        scaledAmount: round((totalBudget * percent) / 100),
+      };
+    }).map((item, index, list) => {
       if (index !== list.length - 1) return item;
       const used = list.slice(0, -1).reduce((sum, other) => sum + other.scaledAmount, 0);
       return { ...item, scaledAmount: round(totalBudget - used) };
