@@ -340,11 +340,12 @@ export function parseGoalValue(goal = '') {
     return { type: 'revenue', value, label: `매출 목표 ${formatBudget(value)}` };
   }
 
-  const customerMatch = text.match(/(?:고객|신규|회원|리드)[^\d]*(\d+(?:\.\d+)?)\s*(만|천)?/)
-    ?? text.match(/(\d+(?:\.\d+)?)\s*(만|천)?\s*(?:명|명확보|고객|신규|회원|리드)/);
+  const customerMatch = text.match(/(?:고객|신규|회원|리드|customer|customers|user|users|acquisition)[^\d]*(\d+(?:\.\d+)?)\s*(만|천|k)?/i)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*(만|천|k)?\s*(?:명|명확보|고객|신규|회원|리드|customer|customers|user|users|new customers)/i);
   if (customerMatch) {
     const raw = Number(customerMatch[1]);
-    const multiplier = customerMatch[2] === '만' ? 10000 : customerMatch[2] === '천' ? 1000 : 1;
+    const unit = String(customerMatch[2] || '').toLowerCase();
+    const multiplier = unit === '만' ? 10000 : unit === '천' || unit === 'k' ? 1000 : 1;
     const value = Math.round(raw * multiplier);
     return { type: 'customers', value, label: `고객 목표 ${value.toLocaleString('ko-KR')}명` };
   }
@@ -471,7 +472,7 @@ function getGoalScaleFactor(parsedGoal) {
 
 function getRevenueOpportunity(parsedGoal, shareRevenueOpportunity) {
   if (parsedGoal.type === 'revenue') return parsedGoal.value;
-  if (parsedGoal.type === 'customers') return round(Math.max(8, Math.min(shareRevenueOpportunity, parsedGoal.value * 0.018)));
+  if (parsedGoal.type === 'customers') return round(Math.max(3, Math.min(shareRevenueOpportunity, parsedGoal.value * 0.006)));
   if (parsedGoal.type === 'traffic') return round(Math.max(3, Math.min(shareRevenueOpportunity, parsedGoal.value * 0.0012)));
   if (parsedGoal.type === 'lift') return round(Math.max(20, Math.min(shareRevenueOpportunity, shareRevenueOpportunity * (parsedGoal.value / 100))));
   return shareRevenueOpportunity;
