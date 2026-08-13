@@ -184,6 +184,7 @@ export function buildPlanningScenario(options = {}) {
   const lifecycleStageKey = lifecycleProfiles[options.lifecycleStage] ? options.lifecycleStage : 'launch';
   const lifecycleProfile = lifecycleProfiles[lifecycleStageKey];
   const competitors = Array.isArray(options.competitors) ? options.competitors.filter(Boolean).slice(0, 5) : [];
+  const competitorMode = options.competitorMode ?? (competitors.length ? 'known' : 'unknown');
   const marketRevenue = Number(options.marketRevenue ?? 5000);
   const targetShare = Number(options.targetShare ?? 10);
   const monthlyTvBudget = Number(options.monthlyTvBudget ?? 12);
@@ -197,7 +198,7 @@ export function buildPlanningScenario(options = {}) {
   const shareRevenueOpportunity = round(marketRevenue * (targetShare / 100));
   const targetRevenueOpportunity = getRevenueOpportunity(parsedGoal, shareRevenueOpportunity);
   const goalScaleFactor = getGoalScaleFactor(parsedGoal);
-  const competitorCountFactor = round(1 + Math.min(competitors.length, 5) * 0.025);
+  const competitorCountFactor = competitorMode === 'known' ? round(1 + Math.min(competitors.length, 5) * 0.025) : 1;
   const marketSize = options.marketSize ?? 58000;
   const targetPopulation = options.targetPopulation ?? targetProfile.population;
   const categoryAdIntensity = options.categoryAdIntensity ?? 0.000265;
@@ -247,6 +248,7 @@ export function buildPlanningScenario(options = {}) {
     goalType: goalProfile.label,
     targetType: targetProfile.label,
     competitionLevel: competitionProfile.label,
+    competitorMode,
     lifecycleStage: lifecycleProfile.label,
     competitors,
     marketRevenue,
@@ -285,7 +287,7 @@ export function buildPlanningScenario(options = {}) {
         ? `목표 문장에서 매출 목표 ${formatBudget(parsedGoal.value)}를 읽어 예산 산정에 직접 반영했습니다.`
         : `시장 ${formatBudget(marketRevenue)}에서 목표 점유율 ${targetShare}%는 매출 기회 ${formatBudget(targetRevenueOpportunity)}로 환산됩니다.`,
       `현재 월 TV ${formatBudget(monthlyTvBudget)} + 디지털 ${formatBudget(monthlyDigitalBudget)} 집행은 연간 run-rate ${formatBudget(currentAnnualRunRate)}입니다.`,
-      competitors.length ? `입력된 주요 경쟁사 ${competitors.length}개를 기준으로 경쟁 보정 ${competitorCountFactor.toFixed(3)}x를 추가했습니다.` : '경쟁사명이 없으면 업종 평균 경쟁 강도만 적용합니다.',
+      getCompetitorNote(competitorMode, competitors, competitorCountFactor),
       `타깃 성향은 ${targetProfile.label}으로 판단해 매체 배분을 보정했습니다.`,
     ],
     domesticMediaPatterns,
@@ -469,6 +471,13 @@ function getRevenueOpportunity(parsedGoal, shareRevenueOpportunity) {
   if (parsedGoal.type === 'traffic') return round(Math.max(3, Math.min(shareRevenueOpportunity, parsedGoal.value * 0.0012)));
   if (parsedGoal.type === 'lift') return round(Math.max(20, Math.min(shareRevenueOpportunity, shareRevenueOpportunity * (parsedGoal.value / 100))));
   return shareRevenueOpportunity;
+}
+
+function getCompetitorNote(mode, competitors, factor) {
+  if (mode === 'none') return '경쟁사 없음으로 선택되어 경쟁사명 보정 없이 시장 평균 광고 intensity만 적용했습니다.';
+  if (mode === 'unknown') return '경쟁사를 모름으로 선택해 DART/KOSIS/업종 벤치마크 기반 평균 경쟁 강도를 적용했습니다.';
+  if (competitors.length) return `입력된 주요 경쟁사 ${competitors.length}개를 기준으로 경쟁 보정 ${factor.toFixed(3)}x를 추가했습니다.`;
+  return '직접 입력 모드지만 경쟁사명이 없어 업종 평균 경쟁 강도만 적용했습니다.';
 }
 
 export function inferGoalProfile(goal = '') {

@@ -14,7 +14,8 @@ import {
 const state = {
   step: 0,
   budget: 18.5,
-  company: 'Korea Eundan',
+  company: '고려은단',
+  brand: '',
   goal: '2026 H2 신규 고객 확대',
   market: '건강기능식품 / 전국 / 25-54',
   currentBudget: 12,
@@ -30,7 +31,8 @@ const state = {
   requiredRoas: 1.8,
   customerLtv: 42,
   conversionRate: 2.6,
-  competitors: ['리쥬란', '울쎄라', '뉴라미스'],
+  competitorMode: 'unknown',
+  competitors: [],
 };
 
 const steps = Array.from(document.querySelectorAll('.screen'));
@@ -46,6 +48,10 @@ function getCurrentScenario() {
     currentBudget: state.currentBudget,
     hasCurrentBudget: state.hasCurrentBudget,
     targetGoal: state.goal,
+    company: state.company,
+    brand: state.brand,
+    market: state.market,
+    targetSegment: state.targetSegment,
     competitionLevel: state.competitionLevel,
     targetType: state.targetType,
     lifecycleStage: state.lifecycleStage,
@@ -57,6 +63,7 @@ function getCurrentScenario() {
     requiredRoas: state.requiredRoas,
     customerLtv: state.customerLtv,
     conversionRate: state.conversionRate,
+    competitorMode: state.competitorMode,
     competitors: state.competitors,
   });
 }
@@ -291,6 +298,101 @@ function renderAll() {
   drawGoalCurve();
   renderBudgetPeriodLabels(scenario);
   normalizeLandingGoalUi();
+  normalizeMarketInputUi();
+}
+
+function normalizeMarketInputUi() {
+  const companyInput = document.querySelector('#companyInput');
+  if (companyInput) {
+    if (!companyInput.dataset.normalized) {
+      companyInput.value = state.company;
+      companyInput.dataset.normalized = 'true';
+    }
+    const label = companyInput.closest('label');
+    if (label?.firstChild) label.firstChild.textContent = '회사명';
+  }
+
+  const marketInput = document.querySelector('#marketInput');
+  if (marketInput && !document.querySelector('#brandInput')) {
+    const label = marketInput.closest('label');
+    if (label?.parentNode) {
+      label.innerHTML = '시장 카테고리<input id="marketInput" value="" placeholder="예: 콘드로이친 / 관절 건강기능식품">';
+      label.insertAdjacentHTML('beforebegin', '<label>브랜드/제품명<input id="brandInput" value="" placeholder="예: 관절올케어"></label>');
+      label.insertAdjacentHTML('afterend', '<label>타깃 세그먼트<input id="targetSegmentInput" value="" placeholder="예: 45-69 여성 / 관절 건강 관심층"></label>');
+    }
+  }
+
+  const competitorInputs = Array.from(document.querySelectorAll('.competitor-input'));
+  if (competitorInputs.length && !document.querySelector('#competitorModeInput')) {
+    const firstLabel = competitorInputs[0].closest('label');
+    firstLabel?.insertAdjacentHTML('beforebegin', `
+      <label>경쟁사 입력<select id="competitorModeInput">
+        <option value="unknown">모름</option>
+        <option value="none">없음</option>
+        <option value="known">직접 입력</option>
+      </select></label>
+    `);
+    competitorInputs.forEach((input, index) => {
+      input.value = '';
+      input.placeholder = index === 0 ? '예: 주영엔에스' : '선택 입력';
+      const label = input.closest('label');
+      if (label?.firstChild) label.firstChild.textContent = `주요 경쟁사 ${index + 1}`;
+      label?.classList.add('competitor-field');
+    });
+  }
+
+  updateCompetitorFieldState();
+  normalizeBusinessUnitLabels();
+  bindDynamicMarketInputs();
+}
+
+function normalizeBusinessUnitLabels() {
+  const labels = [
+    ['#requiredRoasInput', '요구 ROAS 배수', 'x'],
+    ['#customerLtvInput', '고객 LTV', '만원'],
+    ['#conversionRateInput', '방문 전환율', '%'],
+    ['#grossMarginInput', '마진율', '%'],
+    ['#marketSizeInput', '시장 규모', '억원'],
+    ['#targetShareInput', '목표 점유율', '%'],
+    ['#monthlyTvInput', '현재 TV 월 집행', '억원'],
+    ['#monthlyDigitalInput', '현재 디지털 월 집행', '억원'],
+  ];
+  labels.forEach(([selector, text, unit]) => {
+    const input = document.querySelector(selector);
+    const label = input?.closest('label');
+    if (label?.firstChild) label.firstChild.textContent = text;
+    const span = label?.querySelector('span');
+    if (span) span.textContent = unit;
+  });
+}
+
+function bindDynamicMarketInputs() {
+  if (window.__howmuchDynamicInputsBound) return;
+  window.__howmuchDynamicInputsBound = true;
+
+  document.addEventListener('input', (event) => {
+    if (event.target?.id === 'brandInput') state.brand = event.target.value;
+    if (event.target?.id === 'targetSegmentInput') state.targetSegment = event.target.value;
+    if (event.target?.id === 'marketInput') state.market = event.target.value;
+  });
+
+  document.addEventListener('change', (event) => {
+    if (event.target?.id === 'competitorModeInput') {
+      state.competitorMode = event.target.value;
+      if (state.competitorMode !== 'known') state.competitors = [];
+      updateCompetitorFieldState();
+      renderAll();
+    }
+  });
+}
+
+function updateCompetitorFieldState() {
+  const mode = document.querySelector('#competitorModeInput')?.value ?? state.competitorMode;
+  const disabled = mode !== 'known';
+  document.querySelectorAll('.competitor-input').forEach((input) => {
+    input.disabled = disabled;
+    if (disabled) input.value = '';
+  });
 }
 
 function normalizeLandingGoalUi() {
@@ -515,6 +617,11 @@ document.querySelector('#conversionRateInput')?.addEventListener('input', (event
 
 document.querySelectorAll('.competitor-input').forEach((input) => {
   input.addEventListener('input', () => {
+    if (state.competitorMode !== 'known') {
+      state.competitors = [];
+      renderAll();
+      return;
+    }
     state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
       .map((node) => node.value.trim())
       .filter(Boolean)
