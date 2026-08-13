@@ -75,6 +75,21 @@ function showStep(index) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function goHome() {
+  showStep(0);
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+}
+
+function syncLandingGoalToForm() {
+  const landingGoal = document.querySelector('#landingGoal');
+  const value = landingGoal?.value?.trim();
+  if (!value) return;
+  state.goal = value;
+  setInput('#goalInput', value);
+}
+
 function drawGoalCurve() {
   const svg = document.querySelector('#goalCurve');
   if (!svg) return;
@@ -275,6 +290,34 @@ function renderAll() {
   renderMix(scenario);
   drawGoalCurve();
   renderBudgetPeriodLabels(scenario);
+  normalizeLandingGoalUi();
+}
+
+function normalizeLandingGoalUi() {
+  const landingGoal = document.querySelector('#landingGoal');
+  if (landingGoal && landingGoal.value.includes('??')) {
+    landingGoal.value = state.goal || '신규 고객 10,000명 확보';
+  }
+  if (landingGoal) landingGoal.placeholder = '예: 연간 매출 100억 증대';
+  const submit = document.querySelector('.icon-submit');
+  if (submit) {
+    submit.textContent = '→';
+    submit.setAttribute('aria-label', '입력한 목표로 시작');
+    submit.title = '입력한 목표로 시작';
+  }
+  const presets = Array.from(document.querySelectorAll('[data-goal]'));
+  const presetLabels = [
+    ['브랜드 인지도', '30% 향상', '브랜드 인지도 30% 향상'],
+    ['웹사이트 방문', '50,000회', '웹사이트 방문 50,000회'],
+    ['신규 고객 확보', '10,000명', '신규 고객 10,000명 확보'],
+    ['매출 증대', '10억원', '연간 매출 10억 증대'],
+  ];
+  presets.forEach((button, index) => {
+    const preset = presetLabels[index];
+    if (!preset) return;
+    button.dataset.goal = preset[2];
+    button.innerHTML = `${preset[0]}<br><b>${preset[1]}</b>`;
+  });
 }
 
 function renderBudgetPeriodLabels(scenario = getCurrentScenario()) {
@@ -361,7 +404,10 @@ function setText(selector, text) {
 }
 
 document.querySelectorAll('[data-next]').forEach((button) => {
-  button.addEventListener('click', () => showStep(state.step + 1));
+  button.addEventListener('click', () => {
+    if (state.step === 0) syncLandingGoalToForm();
+    showStep(state.step + 1);
+  });
 });
 
 document.querySelectorAll('[data-back]').forEach((button) => {
@@ -373,6 +419,11 @@ document.querySelectorAll('[data-result]').forEach((button) => {
 });
 
 document.querySelectorAll('[data-goal]').forEach((button) => {
+  const label = button.textContent;
+  if (label.includes('30')) button.dataset.goal = '브랜드 인지도 30% 향상';
+  if (label.includes('50,000') || label.includes('50000')) button.dataset.goal = '웹사이트 방문 50,000회';
+  if (label.includes('10,000') || label.includes('10000')) button.dataset.goal = '신규 고객 10,000명 확보';
+  if (label.includes('10') && !label.includes('10,000') && !label.includes('10000')) button.dataset.goal = '연간 매출 10억 증대';
   button.addEventListener('click', () => {
     const value = button.dataset.goal;
     state.goal = value;
@@ -381,6 +432,11 @@ document.querySelectorAll('[data-goal]').forEach((button) => {
     renderAll();
     showStep(1);
   });
+});
+
+document.querySelector('.brand')?.addEventListener('click', (event) => {
+  event.preventDefault();
+  goHome();
 });
 
 document.querySelector('#landingGoal')?.addEventListener('input', (event) => {
