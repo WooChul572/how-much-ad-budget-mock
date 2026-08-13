@@ -60,6 +60,7 @@ function getCurrentScenario() {
     market: state.market,
     targetSegment: state.targetSegment,
     competitionLevel: state.competitionLevel,
+    competitionIndex: String(state.competitionIndex || ''),
     targetType: state.targetType,
     lifecycleStage: state.lifecycleStage,
     marketRevenue: state.marketRevenue,
@@ -329,6 +330,8 @@ async function loadAiEnrichment() {
   renderEnrichmentStatus();
   try {
     const params = new URLSearchParams({
+      brand: state.brand,
+      goal: state.goal,
       goal: state.goal,
       company: state.company,
       brand: state.brand,
@@ -714,7 +717,7 @@ function bindDynamicMarketInputs() {
 
   document.addEventListener('focusin', (event) => {
     if (!event.target?.classList?.contains('competitor-input')) return;
-    competitorEdited = true;
+    if (event.target.value.trim()) competitorEdited = true;
     renderCompetitorHelp();
   });
 }
@@ -829,6 +832,12 @@ async function loadApiContext() {
     });
     const snapshotResponse = await fetch(`/api/market-snapshot?${params}`);
     const snapshot = await snapshotResponse.json();
+    if (snapshot?.scenarioAdjustments) {
+      if (!state.market && snapshot.scenarioAdjustments.market) state.market = snapshot.scenarioAdjustments.market;
+      if (!state.targetSegment && snapshot.scenarioAdjustments.targetSegment) state.targetSegment = snapshot.scenarioAdjustments.targetSegment;
+      if (!state.marketRevenue && snapshot.scenarioAdjustments.marketRevenue) state.marketRevenue = snapshot.scenarioAdjustments.marketRevenue;
+      if (!state.competitionIndex && snapshot.scenarioAdjustments.competitionIndex) state.competitionIndex = snapshot.scenarioAdjustments.competitionIndex;
+    }
     renderApiSnapshot(snapshot);
   } catch {
     renderApiStatus({ providers: { dart: { configured: false }, kosis: { configured: false } } });

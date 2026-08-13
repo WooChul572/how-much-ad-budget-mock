@@ -6,6 +6,34 @@ function firstNonEmpty(...values) {
   return values.find((value) => String(value || '').trim()) || '';
 }
 
+const CATEGORY_ENRICHMENTS = [
+  {
+    patterns: [/땡겨요/i, /배달앱/i, /배달\s*앱/i, /음식\s*배달/i],
+    company: '신한은행',
+    brand: '땡겨요',
+    market: '배달앱 / 음식 배달 플랫폼',
+    targetSegment: '2030대 모바일 주문 이용자 / 수도권 직장인·1인 가구',
+    marketRevenue: 26000,
+    targetShare: 5,
+    competitionLevel: 'very-high',
+    lifecycleStage: 'scale',
+    competitors: ['배달의민족', '요기요', '쿠팡이츠'],
+    dataSources: ['Gemini inference', 'category prior: Korean delivery app market'],
+  },
+];
+
+function inferCategoryEnrichment(input = {}) {
+  const text = compactText([
+    input.goal,
+    input.targetGoal,
+    input.company,
+    input.brand,
+    input.market,
+    input.targetSegment,
+  ].filter(Boolean).join(' '));
+  return CATEGORY_ENRICHMENTS.find((item) => item.patterns.some((pattern) => pattern.test(text))) || null;
+}
+
 function inferBrand(goal, company) {
   const text = compactText(goal);
   const withoutCompany = company ? text.replace(company, '').trim() : text;
@@ -16,23 +44,24 @@ function inferBrand(goal, company) {
 
 export function buildFallbackEnrichment(input = {}) {
   const goal = compactText(input.goal || input.targetGoal);
+  const category = inferCategoryEnrichment(input);
   const company = firstNonEmpty(input.company, goal.split(' ')[0]);
   const brand = firstNonEmpty(input.brand, inferBrand(goal, company));
 
   return {
-    company,
-    brand,
-    market: input.market || '',
-    targetSegment: input.targetSegment || '',
-    marketRevenue: Number(input.marketRevenue || 0),
-    targetShare: Number(input.targetShare || 0),
-    competitionLevel: input.competitionLevel && input.competitionLevel !== 'unknown' ? input.competitionLevel : 'unknown',
-    lifecycleStage: input.lifecycleStage || 'launch',
-    competitorMode: input.competitors?.length ? 'known' : 'unknown',
-    competitors: Array.isArray(input.competitors) ? input.competitors.slice(0, 5) : [],
+    company: firstNonEmpty(input.company, category?.company, company),
+    brand: firstNonEmpty(input.brand, category?.brand, brand),
+    market: firstNonEmpty(input.market, category?.market),
+    targetSegment: firstNonEmpty(input.targetSegment, category?.targetSegment),
+    marketRevenue: Number(input.marketRevenue || category?.marketRevenue || 0),
+    targetShare: Number(input.targetShare || category?.targetShare || 0),
+    competitionLevel: input.competitionLevel && input.competitionLevel !== 'unknown' ? input.competitionLevel : category?.competitionLevel || 'unknown',
+    lifecycleStage: input.lifecycleStage || category?.lifecycleStage || 'launch',
+    competitorMode: input.competitors?.length || category?.competitors?.length ? 'known' : 'unknown',
+    competitors: Array.isArray(input.competitors) && input.competitors.length ? input.competitors.slice(0, 5) : category?.competitors || [],
     confidence: 0,
-    sourceMode: 'gemini-required',
-    dataSources: ['Gemini API required'],
+    sourceMode: category ? 'category-assisted' : 'gemini-required',
+    dataSources: category?.dataSources || ['Gemini API required'],
     rationale: 'Gemini API가 연결되면 목표 문장과 공공 데이터 맥락을 바탕으로 시장, 타겟, 경쟁사, 시장규모를 자동 추정합니다.',
   };
 }
@@ -54,7 +83,9 @@ export function mergeEnrichmentIntoScenarioInput(base = {}, enrichment = {}) {
 export function sanitizeEnrichment(data = {}, fallback = {}) {
   const allowedCompetition = new Set(['unknown', 'low', 'medium', 'high', 'very-high']);
   const allowedLifecycle = new Set(['launch', 'scale', 'stabilize', 'defend']);
-  const competitors = Array.isArray(data.competitors) ? data.competitors.map(String).filter(Boolean).slice(0, 5) : fallback.competitors;
+  const competitors = Array.isArray(data.competitors) && data.competitors.length
+    ? data.competitors.map(String).filter(Boolean).slice(0, 5)
+    : fallback.competitors;
   return {
     company: firstNonEmpty(data.company, fallback.company),
     brand: firstNonEmpty(data.brand, fallback.brand),

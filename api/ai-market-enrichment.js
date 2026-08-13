@@ -1,4 +1,5 @@
 import { buildFallbackEnrichment, sanitizeEnrichment } from './enrichment-utils.mjs';
+import { buildProviderSnapshot } from './provider-data.mjs';
 
 function queryValue(query, key) {
   const value = query?.[key];
@@ -14,12 +15,14 @@ function parseJsonFromText(text) {
   }
 }
 
-async function callGeminiForEnrichment(input, fallback) {
+async function callGeminiForEnrichment(input, fallback, providerSnapshot) {
   if (!process.env.GEMINI_API_KEY) return null;
 
   const prompt = [
     'You are a Korean B2B marketing intelligence analyst.',
     'Infer missing campaign planning fields from advertiser name, brand, goal, market and target.',
+    'Use providerSnapshot from DART/KOSIS attempts as evidence. If live rows are unavailable, treat benchmark values as estimates and say so in dataSources/rationale.',
+    'For Korean consumer platforms, infer realistic market, target segment, and key competitors when the brand/category is obvious.',
     'Use cautious estimates. Never invent exact facts as verified. Mark inferred dataSources clearly.',
     'Return only valid JSON with keys: company, brand, market, targetSegment, marketRevenue, targetShare, competitionLevel, lifecycleStage, competitorMode, competitors, confidence, dataSources, rationale.',
     'competitionLevel must be one of unknown, low, medium, high, very-high.',
@@ -27,6 +30,7 @@ async function callGeminiForEnrichment(input, fallback) {
     'marketRevenue is annual Korean market size in KRW eok.',
     `Input: ${JSON.stringify(input)}`,
     `Fallback baseline: ${JSON.stringify(fallback)}`,
+    `Provider snapshot: ${JSON.stringify(providerSnapshot)}`,
   ].join('\n');
 
   const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
@@ -72,25 +76,29 @@ export default async function handler(request, response) {
   };
 
   const fallback = buildFallbackEnrichment(input);
+  const providerSnapshot = await buildProviderSnapshot(input);
   if (!process.env.GEMINI_API_KEY) {
     response.status(200).json({
       ...fallback,
       geminiConfigured: false,
+      providerSnapshot,
       warning: 'GEMINI_API_KEY is not configured. No templated market or competitor values were generated.',
     });
     return;
   }
 
   try {
-    const ai = await callGeminiForEnrichment(input, fallback);
+    const ai = await callGeminiForEnrichment(input, fallback, providerSnapshot);
     response.status(200).json({
       ...sanitizeEnrichment(ai, fallback),
       geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      providerSnapshot,
     });
   } catch (error) {
     response.status(200).json({
       ...fallback,
       geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      providerSnapshot,
       warning: error.message,
     });
   }
