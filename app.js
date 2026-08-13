@@ -253,19 +253,35 @@ function fillIfEmpty(selector, value) {
   return true;
 }
 
+function applyEnrichmentField(stateKey, selectors, value) {
+  if (value === undefined || value === null || value === '') return false;
+  const cleanValue = String(value).trim();
+  if (!cleanValue) return false;
+  let applied = false;
+  selectors.forEach((selector) => {
+    applied = fillIfEmpty(selector, cleanValue) || applied;
+  });
+  if (!state[stateKey]) {
+    state[stateKey] = cleanValue;
+    applied = true;
+  }
+  return applied;
+}
+
 function applyEnrichmentToForm(enrichment) {
   if (!enrichment) return;
-  fillIfEmpty('#companyInput', enrichment.company);
-  fillIfEmpty('#brandInput', enrichment.brand);
+  applyEnrichmentField('company', ['#goalCompanyInput', '#companyInput'], enrichment.company);
+  applyEnrichmentField('brand', ['#goalBrandInput', '#brandInput'], enrichment.brand);
   if (enrichment.sourceMode !== 'gemini-enriched') {
+    syncVisibleInputsFromState();
     syncFormInputsToState();
     renderAll();
     return;
   }
-  fillIfEmpty('#marketInput', enrichment.market);
-  fillIfEmpty('#targetSegmentInput', enrichment.targetSegment);
-  fillIfEmpty('#marketSizeInput', enrichment.marketRevenue);
-  fillIfEmpty('#targetShareInput', enrichment.targetShare);
+  applyEnrichmentField('market', ['#marketInput'], enrichment.market);
+  applyEnrichmentField('targetSegment', ['#targetSegmentInput'], enrichment.targetSegment);
+  applyEnrichmentField('marketRevenue', ['#marketSizeInput'], enrichment.marketRevenue);
+  applyEnrichmentField('targetShare', ['#targetShareInput'], enrichment.targetShare);
   if (document.querySelector('#competitionLevelInput')?.value === 'unknown') {
     setSelectValue('#competitionLevelInput', enrichment.competitionLevel);
   }
@@ -280,6 +296,7 @@ function applyEnrichmentToForm(enrichment) {
     });
   }
   syncFormInputsToState();
+  syncVisibleInputsFromState();
   renderAll();
 }
 
