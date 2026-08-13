@@ -216,6 +216,22 @@
       <div class="form-grid">
         <label>회사명<input id="companyInput" value="Korea Eundan"></label>
         <label>시장/타깃<input id="marketInput" value="건강기능식품 / 전국 / 25-54"></label>
+        <label>타깃 성향<select id="targetTypeInput"><option value="mass">대중 인지도형</option><option value="search">검색 수요형</option><option value="conversion">전환/구매형</option><option value="local">지역 접점형</option></select></label>
+        <label>경쟁 강도<select id="competitionLevelInput"><option value="medium">보통</option><option value="low">낮음</option><option value="high">높음</option><option value="very-high">매우 높음</option></select></label>
+        <label>캠페인 단계<select id="lifecycleStageInput"><option value="launch">런칭 초기</option><option value="scale">공격 성장</option><option value="stabilize">안정화</option><option value="defend">방어/유지</option></select></label>
+        <label>시장 규모<input id="marketSizeInput" type="number" value="5000" min="100" step="100"><span>억원</span></label>
+        <label>목표 점유율<input id="targetShareInput" type="number" value="10" min="1" max="50" step="1"><span>%</span></label>
+        <label>현재 TV 월 집행<input id="monthlyTvInput" type="number" value="12" min="0" step="0.5"><span>억원</span></label>
+        <label>현재 디지털 월 집행<input id="monthlyDigitalInput" type="number" value="14" min="0" step="0.5"><span>억원</span></label>
+        <label>마진율<input id="grossMarginInput" type="number" value="52" min="1" max="95" step="1"><span>%</span></label>
+        <label>요구 ROAS<input id="requiredRoasInput" type="number" value="1.8" min="0.5" max="10" step="0.1"><span>x</span></label>
+        <label>고객 LTV<input id="customerLtvInput" type="number" value="42" min="1" step="1"><span>만원</span></label>
+        <label>방문 전환율<input id="conversionRateInput" type="number" value="2.6" min="0.1" max="30" step="0.1"><span>%</span></label>
+        <label>주요 경쟁사 1<input class="competitor-input" value="리쥬란"></label>
+        <label>주요 경쟁사 2<input class="competitor-input" value="울쎄라"></label>
+        <label>주요 경쟁사 3<input class="competitor-input" value="뉴라미스"></label>
+        <label>주요 경쟁사 4<input class="competitor-input" placeholder="선택 입력"></label>
+        <label>주요 경쟁사 5<input class="competitor-input" placeholder="선택 입력"></label>
         <label>현재 예산 기준<select id="budgetModeInput"><option value="with">현재 광고비 있음</option><option value="without">현재 광고비 없음</option></select></label>
         <label>현재 광고비<input id="currentBudgetInput" type="number" value="12" min="1" step="0.1"><span>억원</span></label>
         <label>목표 기간<select><option>다음 반기</option><option>다음 분기</option><option>연간</option></select></label>

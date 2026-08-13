@@ -19,6 +19,18 @@ const state = {
   market: '건강기능식품 / 전국 / 25-54',
   currentBudget: 12,
   hasCurrentBudget: true,
+  competitionLevel: 'medium',
+  targetType: 'mass',
+  lifecycleStage: 'launch',
+  marketRevenue: 5000,
+  targetShare: 10,
+  monthlyTvBudget: 12,
+  monthlyDigitalBudget: 14,
+  grossMargin: 52,
+  requiredRoas: 1.8,
+  customerLtv: 42,
+  conversionRate: 2.6,
+  competitors: ['리쥬란', '울쎄라', '뉴라미스'],
 };
 
 const steps = Array.from(document.querySelectorAll('.screen'));
@@ -34,6 +46,18 @@ function getCurrentScenario() {
     currentBudget: state.currentBudget,
     hasCurrentBudget: state.hasCurrentBudget,
     targetGoal: state.goal,
+    competitionLevel: state.competitionLevel,
+    targetType: state.targetType,
+    lifecycleStage: state.lifecycleStage,
+    marketRevenue: state.marketRevenue,
+    targetShare: state.targetShare,
+    monthlyTvBudget: state.monthlyTvBudget,
+    monthlyDigitalBudget: state.monthlyDigitalBudget,
+    grossMargin: state.grossMargin,
+    requiredRoas: state.requiredRoas,
+    customerLtv: state.customerLtv,
+    conversionRate: state.conversionRate,
+    competitors: state.competitors,
   });
 }
 
@@ -94,10 +118,10 @@ function drawGoalCurve() {
   `;
 }
 
-function renderMix() {
+function renderMix(scenario = getCurrentScenario()) {
   const list = document.querySelector('#mixList');
   if (list) {
-    list.innerHTML = getScaledMix(state.budget).map((item) => `
+    list.innerHTML = getScaledMix(state.budget, scenario).map((item) => `
       <div class="mix-row">
         <div class="mix-channel">
           <span class="swatch" style="background:${item.color}"></span>
@@ -113,7 +137,7 @@ function renderMix() {
 
   const comparison = document.querySelector('#mixCompare');
   if (comparison) {
-    comparison.innerHTML = mediaMix.map((item) => `
+    comparison.innerHTML = scenario.mediaMix.map((item) => `
       <div class="compare-row">
         <span>${item.channel}</span>
         <div class="compare-bars">
@@ -183,7 +207,30 @@ function renderEnginePanel(scenario) {
 
   const stepsTarget = document.querySelector('#engineSteps');
   if (stepsTarget) {
-    stepsTarget.innerHTML = scenario.engineSteps.map((step, index) => `
+    const summary = `
+      <article class="scenario-explain">
+        <span>WHY</span>
+        <b>입력값 반영 요약</b>
+        <small>목표: ${scenario.goalType} · 타깃: ${scenario.targetType} · 경쟁 강도: ${scenario.competitionLevel} · 단계: ${scenario.lifecycleStage}</small>
+        <small>정량 목표 해석: ${scenario.parsedGoal?.label ?? '업종 평균 목표 강도 적용'}</small>
+        <small>시장 ${formatWon(scenario.marketRevenue)} · 목표 점유율 ${scenario.targetShare}% · 현재 연간 run-rate ${formatWon(scenario.currentAnnualRunRate)}</small>
+        <small>한국 시장 트렌드: 런칭은 TV/YouTube 도달을 유지하고, 안정화 이후 검색·커머스·성과형 디지털로 이동</small>
+        <small>주요 경쟁사: ${scenario.competitors?.length ? scenario.competitors.join(', ') : '업종 평균 기준'}</small>
+      </article>
+      <article class="scenario-explain">
+        <span>MODEL</span>
+        <b>예산 산정 근거</b>
+        <small>시장점유율 확보 예산: ${formatWon(scenario.budgetDrivers.marketShareBudget)} · SOV 필요 예산: ${formatWon(scenario.budgetDrivers.sovBudget)}</small>
+        <small>MMM 효율 예산: ${formatWon(scenario.budgetDrivers.mmmBudget)} · 유지 하한: ${formatWon(scenario.budgetDrivers.maintenanceBudget)}</small>
+      </article>
+      <article class="scenario-explain">
+        <span>ROAS</span>
+        <b>${scenario.businessCase.judgement}</b>
+        <small>${scenario.businessCase.primaryMetric}</small>
+        <small>${scenario.businessCase.recommendation}</small>
+      </article>
+    `;
+    stepsTarget.innerHTML = summary + scenario.engineSteps.map((step, index) => `
       <article>
         <span>${String(index + 1).padStart(2, '0')}</span>
         <b>${step.name}</b>
@@ -225,8 +272,39 @@ function renderAll() {
   const scenario = getCurrentScenario();
   renderMetrics();
   renderPlans(scenario);
-  renderMix();
+  renderMix(scenario);
   drawGoalCurve();
+  renderBudgetPeriodLabels(scenario);
+}
+
+function renderBudgetPeriodLabels(scenario = getCurrentScenario()) {
+  const periodText = '연간 기준';
+  const landingLabel = document.querySelector('.scenario-card .panel-label');
+  if (landingLabel) landingLabel.textContent = 'Recommended Annual Budget';
+
+  setText('#landingBudgetRange', `${periodText} 적정 범위 ${formatWon(scenario.range[0])} ~ ${formatWon(scenario.range[1])}`);
+
+  const currentBudgetInput = document.querySelector('#currentBudgetInput');
+  const currentBudgetLabel = currentBudgetInput?.closest('label');
+  if (currentBudgetLabel?.firstChild) currentBudgetLabel.firstChild.textContent = `현재 광고비 ${periodText}`;
+  const currentBudgetUnit = currentBudgetLabel?.querySelector('span');
+  if (currentBudgetUnit) currentBudgetUnit.textContent = '억원';
+
+  const dashboardHead = document.querySelector('.dashboard-head h2');
+  if (dashboardHead && !document.querySelector('.period-note')) {
+    const note = document.createElement('p');
+    note.className = 'period-note';
+    note.textContent = '모든 예산 금액은 연간 광고예산 기준입니다.';
+    dashboardHead.insertAdjacentElement('afterend', note);
+  }
+
+  const metricLabels = document.querySelectorAll('.metric > span');
+  if (metricLabels[0]) metricLabels[0].textContent = `추천 광고비 ${periodText}`;
+  if (metricLabels[1]) metricLabels[1].textContent = `적정 범위 ${periodText}`;
+  if (state.hasCurrentBudget) setText('#currentBudgetLabel', `${formatWon(scenario.currentBudget)} ${periodText} 대비`);
+
+  const whatIfLabel = document.querySelector('label[for="budgetSlider"]');
+  if (whatIfLabel?.firstChild) whatIfLabel.firstChild.textContent = 'What-if Annual Budget ';
 }
 
 function renderApiStatus(status) {
@@ -246,7 +324,8 @@ function renderApiSnapshot(snapshot) {
   target.innerHTML = `
     <b>시장/타깃 데이터 연결</b>
     <span>시장 규모 ${snapshot.marketSize.value} · 타깃 규모 ${snapshot.targetPopulation.value}</span>
-    <span>DART: ${snapshot.companyData.disclosureCoverage} · KOSIS: 시장/타깃 통계 연결 준비 완료</span>
+    <span>DART/KOSIS 키 상태를 확인했고, 현재 목업은 live API 대신 검증용 mock snapshot을 사용합니다.</span>
+    <span>실서비스 단계에서는 기업/시장/타깃/경쟁사별 API 응답값으로 예산 계수를 갱신합니다.</span>
   `;
 }
 
@@ -299,6 +378,8 @@ document.querySelectorAll('[data-goal]').forEach((button) => {
     state.goal = value;
     setInput('#landingGoal', value);
     setInput('#goalInput', value);
+    renderAll();
+    showStep(1);
   });
 });
 
@@ -319,6 +400,71 @@ document.querySelector('#companyInput')?.addEventListener('input', (event) => {
 document.querySelector('#marketInput')?.addEventListener('input', (event) => {
   state.market = event.target.value;
   loadApiContext();
+});
+
+document.querySelector('#targetTypeInput')?.addEventListener('change', (event) => {
+  state.targetType = event.target.value;
+  renderAll();
+});
+
+document.querySelector('#competitionLevelInput')?.addEventListener('change', (event) => {
+  state.competitionLevel = event.target.value;
+  renderAll();
+});
+
+document.querySelector('#lifecycleStageInput')?.addEventListener('change', (event) => {
+  state.lifecycleStage = event.target.value;
+  renderAll();
+});
+
+document.querySelector('#marketSizeInput')?.addEventListener('input', (event) => {
+  state.marketRevenue = Number(event.target.value || 5000);
+  renderAll();
+});
+
+document.querySelector('#targetShareInput')?.addEventListener('input', (event) => {
+  state.targetShare = Number(event.target.value || 10);
+  renderAll();
+});
+
+document.querySelector('#monthlyTvInput')?.addEventListener('input', (event) => {
+  state.monthlyTvBudget = Number(event.target.value || 0);
+  renderAll();
+});
+
+document.querySelector('#monthlyDigitalInput')?.addEventListener('input', (event) => {
+  state.monthlyDigitalBudget = Number(event.target.value || 0);
+  renderAll();
+});
+
+document.querySelector('#grossMarginInput')?.addEventListener('input', (event) => {
+  state.grossMargin = Number(event.target.value || 52);
+  renderAll();
+});
+
+document.querySelector('#requiredRoasInput')?.addEventListener('input', (event) => {
+  state.requiredRoas = Number(event.target.value || 1.8);
+  renderAll();
+});
+
+document.querySelector('#customerLtvInput')?.addEventListener('input', (event) => {
+  state.customerLtv = Number(event.target.value || 42);
+  renderAll();
+});
+
+document.querySelector('#conversionRateInput')?.addEventListener('input', (event) => {
+  state.conversionRate = Number(event.target.value || 2.6);
+  renderAll();
+});
+
+document.querySelectorAll('.competitor-input').forEach((input) => {
+  input.addEventListener('input', () => {
+    state.competitors = Array.from(document.querySelectorAll('.competitor-input'))
+      .map((node) => node.value.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    renderAll();
+  });
 });
 
 document.querySelector('#budgetModeInput')?.addEventListener('change', (event) => {
